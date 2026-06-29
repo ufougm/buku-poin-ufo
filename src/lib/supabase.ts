@@ -1,0 +1,85 @@
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
+
+// Database types matching our schema
+export interface DbRegistrant {
+  id: number;
+  full_name: string;
+  email: string;
+  year: string;
+  major: string;
+  faculty?: string;
+  phone?: string;
+  status: string;
+  created_at: string;
+}
+
+export interface DbMentor {
+  id: number;
+  user_id: number;
+  full_name: string;
+  email: string;
+  expertise?: string;
+  max_mentees: number;
+  status: string;
+}
+
+export interface DbActivity {
+  id: number;
+  registrant_id: number;
+  activity_type_id: number;
+  activity_name: string;
+  activity_date: string;
+  activity_date_end?: string;
+  role?: string;
+  location: string;
+  documentation_images?: string[];
+  points: number;
+  status: "pending" | "verified" | "rejected";
+  notes?: string;
+  submitted_at: string;
+  verified_at?: string;
+  verified_by?: number;
+  // joined fields
+  activity_type_name?: string;
+  registrant_name?: string;
+}
+
+export interface DbMentorAssignment {
+  id: number;
+  mentor_id: number;
+  registrant_id: number;
+  assigned_at: string;
+  // joined
+  mentor_name?: string;
+  registrant_name?: string;
+  registrant_email?: string;
+  registrant_year?: string;
+  registrant_major?: string;
+}
+
+export interface DbActivityType {
+  id: number;
+  number: number;
+  name: string;
+  points: number;
+  requires_role: "yes" | "no";
+  description?: string;
+}
+
+export interface DbUserProfile {
+  id: number;
+  email: string;
+  full_name: string;
+  role: "user" | "mentor" | "psdm";
+  created_at: string;
+}

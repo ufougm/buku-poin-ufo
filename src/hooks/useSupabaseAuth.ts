@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { supabase, type DbUserProfile } from "@/lib/supabase";
+import { supabase, IS_LIVE, type DbUserProfile } from "@/lib/supabase";
 import { useLocalData } from "./useLocalData";
-
-const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL;
 
 export function useSupabaseAuth() {
   const local = useLocalData();
@@ -12,46 +10,85 @@ export function useSupabaseAuth() {
 
   // Check session on mount
   useEffect(() => {
-    if (IS_DEMO) {
+    // If no Supabase credentials, skip auth check and go straight to demo
+    if (!IS_LIVE) {
       setLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setSessionUser(session.user);
-        fetchProfile(session.user.id);
-      } else {
+    let cancelled = false;
+
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (cancelled) return;
+
+        if (error) {
+          console.warn("Supabase auth error:", error.message);
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          setSessionUser(session.user);
+          // Fetch profile
+          try {
+            const { data } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("auth_id", session.user.id)
+              .single();
+            if (!cancelled) {
+              if (data) setUser(data as DbUserProfile);
+              setLoading(false);
+            }
+          } catch {
+            if (!cancelled) setLoading(false);
+          }
+        } else {
+          if (!cancelled) setLoading(false);
+        }
+      } catch (err) {
+        console.warn("Failed to connect to Supabase:", err);
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Set a safety timeout in case Supabase hangs
+    const timeout = setTimeout(() => {
+      if (!cancelled && loading) {
+        console.warn("Supabase auth check timed out, falling back to demo mode");
         setLoading(false);
       }
-    });
+    }, 5000);
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setSessionUser(session.user);
-        fetchProfile(session.user.id);
-      } else {
-        setUser(null);
-        setSessionUser(null);
-        setLoading(false);
-      }
-    });
+    let listener: any;
+    try {
+      const { data: l } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (cancelled) return;
+        if (session?.user) {
+          setSessionUser(session.user);
+        } else {
+          setUser(null);
+          setSessionUser(null);
+        }
+      });
+      listener = l;
+    } catch {
+      // ignore listener errors
+    }
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      listener?.subscription?.unsubscribe();
+    };
   }, []);
 
-  const fetchProfile = async (authId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("auth_id", authId)
-      .single();
-    if (data) setUser(data as DbUserProfile);
-    setLoading(false);
-  };
-
   const signUp = useCallback(async (email: string, password: string, fullName: string, role: "user" | "mentor" | "psdm" = "user") => {
-    if (IS_DEMO) {
+    if (!IS_LIVE) {
       local.loginMock({
         id: Math.floor(Math.random() * 9000) + 1000,
         unionId: `demo_${Date.now()}`,
@@ -62,27 +99,30 @@ export function useSupabaseAuth() {
       return { error: null };
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName, role } },
-    });
-    if (error) return { error };
-
-    // Create profile
-    if (data.user) {
-      await supabase.from("profiles").upsert({
-        auth_id: data.user.id,
+    try {
+      const { data, error } = await supabase.auth.signUp({
         email,
-        full_name: fullName,
-        role,
+        password,
+        options: { data: { full_name: fullName, role } },
       });
+      if (error) return { error };
+
+      if (data.user) {
+        await supabase.from("profiles").upsert({
+          auth_id: data.user.id,
+          email,
+          full_name: fullName,
+          role,
+        });
+      }
+      return { error: null };
+    } catch (err: any) {
+      return { error: { message: err.message || "Registration failed" } };
     }
-    return { error: null };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    if (IS_DEMO) {
+    if (!IS_LIVE) {
       local.loginMock({
         id: Math.floor(Math.random() * 9000) + 1000,
         unionId: `demo_${Date.now()}`,
@@ -92,35 +132,49 @@ export function useSupabaseAuth() {
       });
       return { error: null };
     }
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
+    } catch (err: any) {
+      return { error: { message: err.message || "Login failed" } };
+    }
   }, []);
 
   const signOut = useCallback(async () => {
-    if (IS_DEMO) {
+    if (!IS_LIVE) {
       local.logoutMock();
       return;
     }
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
+    }
     setUser(null);
     setSessionUser(null);
   }, []);
+
+  // Determine effective role (Supabase user > mock user > null)
+  const effectiveRole = (user?.role || (local.mockUser as any)?.role || null) as "user" | "mentor" | "psdm" | null;
+  const isAuthenticated = !!user || !!local.mockUser;
 
   return useMemo(
     () => ({
       user,
       sessionUser,
-      isAuthenticated: !!user || !!local.mockUser,
+      isAuthenticated,
       isLoading: loading,
-      isPsdm: (user?.role || (local.mockUser as any)?.role) === "psdm",
-      isMentor: (user?.role || (local.mockUser as any)?.role) === "mentor",
-      isUser: (user?.role || (local.mockUser as any)?.role) === "user",
-      role: (user?.role || (local.mockUser as any)?.role || null) as "user" | "mentor" | "psdm" | null,
+      isPsdm: effectiveRole === "psdm",
+      isMentor: effectiveRole === "mentor",
+      isUser: effectiveRole === "user",
+      role: effectiveRole,
       signUp,
       signIn,
       signOut,
-      isDemo: IS_DEMO,
+      isLive: IS_LIVE,
+      isDemo: !IS_LIVE,
     }),
-    [user, sessionUser, loading, local.mockUser, signUp, signIn, signOut]
+    [user, sessionUser, loading, effectiveRole, isAuthenticated, signUp, signIn, signOut]
   );
 }

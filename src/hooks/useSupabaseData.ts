@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import { supabase, type DbRegistrant, type DbActivity, type DbMentor, type DbMentorAssignment, type DbActivityType } from "@/lib/supabase";
+import { useState, useCallback } from "react";
+import { supabase, IS_LIVE, type DbRegistrant, type DbActivity, type DbMentor, type DbMentorAssignment, type DbActivityType } from "@/lib/supabase";
 
-const IS_DEMO = !import.meta.env.VITE_SUPABASE_URL;
+const IS_DEMO = !IS_LIVE;
 
 // Activity Types - always from seed data (24 types)
 const ACTIVITY_TYPES: DbActivityType[] = [

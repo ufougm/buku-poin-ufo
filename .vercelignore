@@ -1,0 +1,37 @@
+# Hide ALL backend files from Vercel
+# Vercel should only see and build the frontend
+
+api/
+db/
+contracts/
+supabase/
+scripts/
+drizzle.config.ts
+tsconfig.server.json
+tsconfig.node.json
+.eslintrc*
+eslint.config.*
+.prettierrc*
+vitest.config.*
+
+# Local dev files
+.env
+.env.*
+.vscode/
+.idea/
+
+# Testing
+coverage/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Logs
+*.log
+npm-debug.log*
+
+# Misc
+.github/
+*.md
+!README.md

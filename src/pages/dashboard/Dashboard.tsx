@@ -43,6 +43,8 @@ import {
   Upload,
   Image,
   Trash2,
+  Heart,
+  Award,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -66,6 +68,40 @@ export default function MemberDashboard() {
   const [role, setRole] = useState("");
   const [location, setLocation] = useState("");
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadError, setUploadError] = useState("");
+
+  // Image compression utility
+  const compressImage = (file: File, maxWidth = 800, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (file.size > 5 * 1024 * 1024) {
+        reject(new Error("File terlalu besar. Maksimum 5MB."));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) { reject(new Error("Canvas tidak tersedia")); return; }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = () => reject(new Error("Gagal memuat gambar."));
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error("Gagal membaca file."));
+      reader.readAsDataURL(file);
+    });
+  };
 
   // Registration form state
   const [regYear, setRegYear] = useState("2024");
@@ -100,19 +136,37 @@ export default function MemberDashboard() {
   const selectedType = local.activityTypes.find((t) => t.id === Number(activityTypeId));
   const requiresRole = selectedType?.requiresRole === "yes";
 
-  // Photo upload handler
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Photo upload handler with compression
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          setUploadedImages((prev) => [...prev, reader.result as string]);
+    setUploadError("");
+
+    // Limit total images to 4
+    const remainingSlots = 4 - uploadedImages.length;
+    if (remainingSlots <= 0) {
+      setUploadError("Maksimum 4 foto per kegiatan.");
+      return;
+    }
+
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
+
+    for (const file of filesToProcess) {
+      try {
+        const compressed = await compressImage(file, 800, 0.7);
+        // Check compressed size (base64 is ~4/3 of binary, so ~1.3MB max)
+        const approxSize = (compressed.length * 3) / 4;
+        if (approxSize > 1.5 * 1024 * 1024) {
+          setUploadError(`Gambar "${file.name}" terlalu besar setelah dikompresi. Coba gambar lain.`);
+          continue;
         }
-      };
-      reader.readAsDataURL(file);
-    });
+        setUploadedImages((prev) => [...prev, compressed]);
+      } catch (err: any) {
+        setUploadError(err.message || `Gagal mengupload "${file.name}".`);
+      }
+    }
+    // Reset input so same file can be selected again
+    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
@@ -138,21 +192,31 @@ export default function MemberDashboard() {
   const handleSubmitActivity = (e: React.FormEvent) => {
     e.preventDefault();
     if (!myRegistrant || !activityTypeId) return;
-    local.addActivity({
-      registrantId: myRegistrant.id,
-      activityTypeId: Number(activityTypeId),
-      activityName,
-      activityDate,
-      activityDateEnd: activityDateEnd || undefined,
-      role: requiresRole ? role : undefined,
-      location,
-      documentationImages: uploadedImages.length > 0 ? uploadedImages : undefined,
-      points: selectedType?.points || 0,
-      status: "pending",
-    });
-    setFormOpen(false);
-    resetForm();
-    setRefreshTick((t) => t + 1);
+    setUploadError("");
+
+    try {
+      local.addActivity({
+        registrantId: myRegistrant.id,
+        activityTypeId: Number(activityTypeId),
+        activityName,
+        activityDate,
+        activityDateEnd: activityDateEnd || undefined,
+        role: requiresRole ? role : undefined,
+        location,
+        documentationImages: uploadedImages.length > 0 ? uploadedImages : undefined,
+        points: selectedType?.points || 0,
+        status: "pending",
+      });
+      setFormOpen(false);
+      resetForm();
+      setRefreshTick((t) => t + 1);
+    } catch (err: any) {
+      if (err.name === "QuotaExceededError" || err.message?.includes("quota") || err.message?.includes("exceeded")) {
+        setUploadError("Penyimpanan penuh. Coba hapus beberapa foto atau kurangi ukurannya.");
+      } else {
+        setUploadError("Gagal menyimpan kegiatan. Coba lagi.");
+      }
+    }
   };
 
   const resetForm = () => {
@@ -163,6 +227,7 @@ export default function MemberDashboard() {
     setRole("");
     setLocation("");
     setUploadedImages([]);
+    setUploadError("");
   };
 
   // PDF Generation — Buku Poin UFO UGM Format
@@ -421,11 +486,14 @@ export default function MemberDashboard() {
                         <div className="flex flex-col items-center">
                           <Upload className="h-5 w-5 text-gray-400 mb-1" />
                           <span className="text-xs text-gray-500">Klik untuk upload foto</span>
-                          <span className="text-xs text-gray-400">(JPEG, PNG, max 2MB)</span>
+                          <span className="text-xs text-gray-400">(Max 4 foto, max 5MB each)</span>
                         </div>
                         <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
                       </label>
                     </div>
+                    {uploadError && (
+                      <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">{uploadError}</div>
+                    )}
                     {uploadedImages.length > 0 && (
                       <div className="mt-3 grid grid-cols-4 gap-2">
                         {uploadedImages.map((img, idx) => (
@@ -438,6 +506,7 @@ export default function MemberDashboard() {
                         ))}
                       </div>
                     )}
+                    <p className="text-xs text-gray-400 mt-1">{uploadedImages.length}/4 foto</p>
                   </div>
 
                   {selectedType && (
@@ -455,24 +524,67 @@ export default function MemberDashboard() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {[
-            { label: "Total Poin", value: summary.total, color: "text-gray-900", icon: Trophy },
-            { label: "Terverifikasi", value: summary.verified, color: "text-green-600", icon: CheckCircle },
-            { label: "Menunggu", value: summary.pending, color: "text-yellow-600", icon: Clock },
-            { label: "Jumlah Kegiatan", value: summary.count, color: "text-gray-900", icon: FileText },
-          ].map((s) => (
-            <Card key={s.label}>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div><p className="text-sm text-gray-500">{s.label}</p><p className={`text-2xl font-bold ${s.color}`}>{s.value}</p></div>
-                  <s.icon className={`h-8 w-8 ${s.color} opacity-70`} />
+        {/* Membership Progress Card */}
+        <Card className="mb-6 border-0 shadow-lg overflow-hidden">
+          <CardContent className="p-0">
+            <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-white">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Award className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white/90">Progress Menuju Anggota Resmi</p>
+                    <p className="text-xs text-white/70">Minimum 100 poin untuk menjadi anggota UFO UGM</p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold">{summary.verified}<span className="text-lg font-normal text-white/60"> / 100</span></p>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="w-full bg-white/25 rounded-full h-3.5 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ease-out ${
+                    summary.verified >= 100
+                      ? "bg-yellow-300 w-full"
+                      : "bg-white"
+                  }`}
+                  style={{ width: `${Math.min((summary.verified / 100) * 100, 100)}%` }}
+                />
+              </div>
+              {/* Status message */}
+              <p className="text-xs mt-2 text-white/80">
+                {summary.verified >= 100
+                  ? "Selamat! Anda telah memenuhi syarat minimum poin. Silakan hubungi PSDM untuk proses selanjutnya."
+                  : summary.verified >= 75
+                  ? `Tinggal ${100 - summary.verified} poin lagi! Semangat!`
+                  : summary.verified >= 50
+                  ? `Sudah ${summary.verified}% dari target. Teruskan!`
+                  : summary.verified >= 25
+                  ? `Baru ${summary.verified}% dari target. Jangan menyerah!`
+                  : summary.verified > 0
+                  ? `Mulai dari ${summary.verified} poin. Ayo input kegiatan!`
+                  : "Belum ada poin terverifikasi. Ayo input kegiatan pertama Anda!"}
+              </p>
+            </div>
+            {/* Quick info row */}
+            <div className="grid grid-cols-3 divide-x divide-gray-100 bg-gray-50/50">
+              <div className="p-4 text-center">
+                <p className="text-xs text-gray-500">Terverifikasi</p>
+                <p className="text-lg font-bold text-green-600">{summary.verified}</p>
+              </div>
+              <div className="p-4 text-center">
+                <p className="text-xs text-gray-500">Menunggu</p>
+                <p className="text-lg font-bold text-yellow-600">{summary.pending}</p>
+              </div>
+              <div className="p-4 text-center">
+                <p className="text-xs text-gray-500">Total Kegiatan</p>
+                <p className="text-lg font-bold text-gray-900">{summary.count}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Activities Table */}
         <Card>

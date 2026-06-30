@@ -53,6 +53,20 @@ export interface LocalPemanduAssignment {
 /** @deprecated Use LocalPemanduAssignment */
 export type LocalMentorAssignment = LocalPemanduAssignment;
 
+// ─── Kelompok (Group) Model ──────────────────────────────────────
+export interface LocalKelompok {
+  id: number;
+  name: string; // e.g. "Kelompok 1"
+  pemanduIds: number[]; // exactly 2 pemandus
+}
+
+export interface LocalKelompokAssignment {
+  id: number;
+  kelompokId: number;
+  registrantId: number;
+  assignedAt: string;
+}
+
 // ─── Keys ─────────────────────────────────────────────────────────
 const KEYS = {
   registrants: "ukm_registrants",
@@ -62,6 +76,8 @@ const KEYS = {
   activityTypes: "ukm_activity_types",
   verifiedMembers: "ukm_verified_members",
   locations: "ukm_locations",
+  kelompoks: "ukm_kelompoks",
+  kelompokAssignments: "ukm_kelompok_assignments",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────
@@ -84,6 +100,8 @@ let nextId = (() => {
     ...getItem<LocalMentor[]>(KEYS.mentors, []),
     ...getItem<LocalActivity[]>(KEYS.activities, []),
     ...getItem<LocalMentorAssignment[]>(KEYS.assignments, []),
+    ...getItem<LocalKelompok[]>(KEYS.kelompoks, []),
+    ...getItem<LocalKelompokAssignment[]>(KEYS.kelompokAssignments, []),
   ];
   return existing.length > 0 ? Math.max(...existing.map((e) => e.id)) + 1 : 100;
 })();
@@ -146,19 +164,39 @@ export function seedDemoData() {
   ];
   setItem(KEYS.mentors, pemandus);
 
-  // Assignments (5 to pemandu 1, 5 to pemandu 2)
-  const assignments: LocalPemanduAssignment[] = [
-    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[0].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[1].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[2].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[3].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[4].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[5].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[6].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[7].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[8].id, assignedAt: new Date().toISOString() },
-    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[9].id, assignedAt: new Date().toISOString() },
+  // Kelompok (1 kelompok with both pemandus)
+  const kelompoks: LocalKelompok[] = [
+    { id: genId(), name: "Kelompok 1", pemanduIds: [pemandus[0].id, pemandus[1].id] },
   ];
+  setItem(KEYS.kelompoks, kelompoks);
+
+  // Kelompok assignments (all 10 registrants to kelompok 1)
+  const kelompokAssignments: LocalKelompokAssignment[] = [
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[0].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[1].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[2].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[3].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[4].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[5].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[6].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[7].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[8].id, assignedAt: new Date().toISOString() },
+    { id: genId(), kelompokId: kelompoks[0].id, registrantId: registrants[9].id, assignedAt: new Date().toISOString() },
+  ];
+  setItem(KEYS.kelompokAssignments, kelompokAssignments);
+
+  // Pemandu assignments (each registrant gets both pemandus via kelompok)
+  const assignments: LocalPemanduAssignment[] = [];
+  registrants.forEach((reg) => {
+    pemandus.forEach((p) => {
+      assignments.push({
+        id: genId(),
+        pemanduId: p.id,
+        registrantId: reg.id,
+        assignedAt: new Date().toISOString(),
+      });
+    });
+  });
   setItem(KEYS.assignments, assignments);
 
   // Activities (mix of verified and pending for each registrant)
@@ -379,6 +417,102 @@ export function deletePemandu(id: number) {
   setItem(KEYS.assignments, assignments);
 }
 
+// ─── Kelompok CRUD ────────────────────────────────────────────────
+export function getKelompoks(): LocalKelompok[] {
+  return getItem<LocalKelompok[]>(KEYS.kelompoks, []);
+}
+
+export function getKelompokAssignments(): LocalKelompokAssignment[] {
+  return getItem<LocalKelompokAssignment[]>(KEYS.kelompokAssignments, []);
+}
+
+export function addKelompok(data: Omit<LocalKelompok, "id">): LocalKelompok {
+  if (data.pemanduIds.length !== 2) {
+    throw new Error("Kelompok harus terdiri dari tepat 2 pemandu");
+  }
+  const all = getKelompoks();
+  const item: LocalKelompok = { ...data, id: genId() };
+  setItem(KEYS.kelompoks, [...all, item]);
+  return item;
+}
+
+export function updateKelompok(id: number, updates: Partial<LocalKelompok>) {
+  const all = getKelompoks();
+  const updated = all.map((k) => (k.id === id ? { ...k, ...updates } : k));
+  setItem(KEYS.kelompoks, updated);
+}
+
+export function deleteKelompok(id: number) {
+  const all = getKelompoks().filter((k) => k.id !== id);
+  setItem(KEYS.kelompoks, all);
+  // Remove kelompok assignments
+  const assignments = getKelompokAssignments().filter((a) => a.kelompokId !== id);
+  setItem(KEYS.kelompokAssignments, assignments);
+}
+
+// Get kelompok for a registrant
+export function getKelompokForRegistrant(registrantId: number): LocalKelompok | undefined {
+  const ka = getKelompokAssignments().find((a) => a.registrantId === registrantId);
+  if (!ka) return undefined;
+  return getKelompoks().find((k) => k.id === ka.kelompokId);
+}
+
+// Get pemandus for a registrant (via kelompok)
+export function getPemandusForRegistrant(registrantId: number): LocalPemandu[] {
+  const kelompok = getKelompokForRegistrant(registrantId);
+  if (!kelompok) return [];
+  return getPemandus().filter((p) => kelompok.pemanduIds.includes(p.id));
+}
+
+// Get kelompok name for a registrant
+export function getKelompokNameForRegistrant(registrantId: number): string {
+  const kelompok = getKelompokForRegistrant(registrantId);
+  return kelompok?.name || "Belum ditugaskan";
+}
+
+// Assign registrant to kelompok (auto-creates 2 pemandu assignments)
+export function assignRegistrantToKelompok(registrantId: number, kelompokId: number): LocalKelompokAssignment {
+  // Remove existing kelompok assignment for this registrant
+  const existingKa = getKelompokAssignments().filter((a) => a.registrantId !== registrantId);
+  setItem(KEYS.kelompokAssignments, existingKa);
+
+  // Also remove old pemandu assignments for this registrant
+  const existingPa = getAssignments().filter((a) => a.registrantId !== registrantId);
+  setItem(KEYS.assignments, existingPa);
+
+  // Create new kelompok assignment
+  const ka: LocalKelompokAssignment = {
+    id: genId(),
+    kelompokId,
+    registrantId,
+    assignedAt: new Date().toISOString(),
+  };
+  setItem(KEYS.kelompokAssignments, [...getKelompokAssignments(), ka]);
+
+  // Create pemandu assignments for each pemandu in the kelompok
+  const kelompok = getKelompoks().find((k) => k.id === kelompokId);
+  if (kelompok) {
+    const currentAssignments = getAssignments();
+    const newAssignments = kelompok.pemanduIds.map((pid) => ({
+      id: genId(),
+      pemanduId: pid,
+      registrantId,
+      assignedAt: new Date().toISOString(),
+    }));
+    setItem(KEYS.assignments, [...currentAssignments, ...newAssignments]);
+  }
+
+  return ka;
+}
+
+// Remove registrant from kelompok
+export function removeRegistrantFromKelompok(registrantId: number) {
+  const ka = getKelompokAssignments().filter((a) => a.registrantId !== registrantId);
+  setItem(KEYS.kelompokAssignments, ka);
+  const pa = getAssignments().filter((a) => a.registrantId !== registrantId);
+  setItem(KEYS.assignments, pa);
+}
+
 // ─── Registrant CRUD ──────────────────────────────────────────────
 export function updateRegistrant(id: number, updates: Partial<LocalRegistrant>) {
   const all = getRegistrants();
@@ -542,5 +676,16 @@ export function useLocalData() {
     locations: getLocations(),
     addLocation,
     deleteLocation,
+    // Kelompok
+    kelompoks: getKelompoks(),
+    kelompokAssignments: getKelompokAssignments(),
+    addKelompok,
+    updateKelompok,
+    deleteKelompok,
+    assignRegistrantToKelompok,
+    removeRegistrantFromKelompok,
+    getKelompokForRegistrant,
+    getPemandusForRegistrant,
+    getKelompokNameForRegistrant,
   };
 }

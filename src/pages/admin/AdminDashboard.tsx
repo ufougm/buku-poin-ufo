@@ -37,6 +37,7 @@ import {
   MapPin,
   Edit3,
   X,
+  UserCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -51,19 +52,22 @@ import { Label } from "@/components/ui/label";
 export default function AdminDashboard() {
   const local = useLocalData();
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedPemandu, setSelectedPemandu] = useState("");
+  const [selectedKelompok, setSelectedKelompok] = useState("");
   const [selectedRegistrant, setSelectedRegistrant] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
 
   // Data Management state
-  const [dmTab, setDmTab] = useState<"pemandu" | "verified" | "locations" | "registrants">("pemandu");
+  const [dmTab, setDmTab] = useState<"kelompok" | "pemandu" | "verified" | "locations" | "registrants">("kelompok");
   const [showPemanduForm, setShowPemanduForm] = useState(false);
   const [showVerifiedForm, setShowVerifiedForm] = useState(false);
+  const [showKelompokForm, setShowKelompokForm] = useState(false);
   const [editingPemandu, setEditingPemandu] = useState<any>(null);
   const [editingVerified, setEditingVerified] = useState<any>(null);
+  const [editingKelompok, setEditingKelompok] = useState<any>(null);
   const [newLocation, setNewLocation] = useState("");
   const [pemanduForm, setPemanduForm] = useState({ fullName: "", email: "", expertise: "", maxMentees: 10 });
   const [verifiedForm, setVerifiedForm] = useState({ serialNumber: "", fullName: "", email: "", role: "pemandu" as "pemandu" | "psdm" });
+  const [kelompokForm, setKelompokForm] = useState({ name: "", pemanduId1: "", pemanduId2: "" });
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: any } | null>(null);
 
   // Get data from localStorage
@@ -72,10 +76,12 @@ export default function AdminDashboard() {
     const pemandus = local.pemandus;
     const activities = local.activities;
     const assignments = local.assignments;
+    const kelompoks = local.kelompoks;
+    const kelompokAssignments = local.kelompokAssignments;
 
-    // Unassigned registrants
-    const assignedIds = new Set(assignments.map((a) => a.registrantId));
-    const unassigned = registrants.filter((r) => !assignedIds.has(r.id) && r.status === "active");
+    // Unassigned registrants (check kelompok assignments)
+    const assignedKaIds = new Set(kelompokAssignments.map((a) => a.registrantId));
+    const unassigned = registrants.filter((r) => !assignedKaIds.has(r.id) && r.status === "active");
 
     // Stats
     const stats = {
@@ -122,32 +128,66 @@ export default function AdminDashboard() {
       .filter((d) => d.count > 0)
       .sort((a, b) => b.totalPoints - a.totalPoints);
 
-    // Pemandu stats
+    // Pemandu stats (count unique registrants per pemandu via kelompok)
     const pemanduStats = pemandus.map((m) => {
-      const cufoCount = assignments.filter((a) => a.pemanduId === m.id).length;
+      // Find kelompoks containing this pemandu
+      const pemanduKelompoks = kelompoks.filter((k) => k.pemanduIds.includes(m.id));
+      const kelompokIds = pemanduKelompoks.map((k) => k.id);
+      // Count unique registrants in those kelompoks
+      const cufoCount = new Set(
+        kelompokAssignments
+          .filter((ka) => kelompokIds.includes(ka.kelompokId))
+          .map((ka) => ka.registrantId)
+      ).size;
       return { pemanduId: m.id, pemanduName: m.fullName, cufoCount, maxMentees: m.maxMentees };
     });
 
-    // All assignments with names
-    const allAssignments = assignments.map((a) => {
-      const pemandu = pemandus.find((m) => m.id === a.pemanduId);
-      const reg = registrants.find((r) => r.id === a.registrantId);
-      return { assignmentId: a.id, pemanduId: a.pemanduId, pemanduName: pemandu?.fullName || "-", pemanduEmail: pemandu?.email || "-", registrantId: a.registrantId, registrantName: reg?.fullName || "-", registrantEmail: reg?.email || "-", registrantYear: reg?.year || "-", registrantMajor: reg?.major || "-" };
+    // All assignments with names (via kelompok)
+    const allAssignments = kelompokAssignments.map((ka) => {
+      const kelompok = kelompoks.find((k) => k.id === ka.kelompokId);
+      const reg = registrants.find((r) => r.id === ka.registrantId);
+      const pemanduNames = kelompok
+        ? kelompok.pemanduIds.map((pid) => pemandus.find((p) => p.id === pid)?.fullName || "-").join(" & ")
+        : "-";
+      return {
+        assignmentId: ka.id,
+        kelompokId: ka.kelompokId,
+        kelompokName: kelompok?.name || "-",
+        pemanduNames,
+        registrantId: ka.registrantId,
+        registrantName: reg?.fullName || "-",
+        registrantEmail: reg?.email || "-",
+        registrantYear: reg?.year || "-",
+        registrantMajor: reg?.major || "-",
+      };
     });
 
-    return { stats, recentActivities, topRegistrants, activityDistribution, pemanduStats, allAssignments, unassigned, registrants, pemandus };
+    // Kelompok data with pemandu names
+    const kelompokData = kelompoks.map((k) => {
+      const p1 = pemandus.find((p) => p.id === k.pemanduIds[0]);
+      const p2 = pemandus.find((p) => p.id === k.pemanduIds[1]);
+      const cufoCount = kelompokAssignments.filter((ka) => ka.kelompokId === k.id).length;
+      return {
+        ...k,
+        pemandu1Name: p1?.fullName || "-",
+        pemandu2Name: p2?.fullName || "-",
+        cufoCount,
+      };
+    });
+
+    return { stats, recentActivities, topRegistrants, activityDistribution, pemanduStats, allAssignments, unassigned, registrants, pemandus, kelompokData, kelompoks };
   }, [refreshTick]);
 
   const handleAssign = () => {
-    if (!selectedPemandu || !selectedRegistrant) return;
-    local.addAssignment(Number(selectedPemandu), Number(selectedRegistrant));
+    if (!selectedKelompok || !selectedRegistrant) return;
+    local.assignRegistrantToKelompok(Number(selectedRegistrant), Number(selectedKelompok));
     setRefreshTick((t) => t + 1);
-    setSelectedPemandu("");
+    setSelectedKelompok("");
     setSelectedRegistrant("");
   };
 
-  const handleRemove = (assignmentId: number) => {
-    local.removeAssignment(assignmentId);
+  const handleRemove = (registrantId: number) => {
+    local.removeRegistrantFromKelompok(registrantId);
     setRefreshTick((t) => t + 1);
   };
 
@@ -232,6 +272,37 @@ export default function AdminDashboard() {
 
   const handleDeleteRegistrant = (id: number) => {
     local.deleteRegistrant(id);
+    setDeleteConfirm(null);
+    refreshData();
+  };
+
+  // ─── Kelompok CRUD Handlers ──────────────────────────────────────
+  const handleSaveKelompok = () => {
+    if (!kelompokForm.name.trim() || !kelompokForm.pemanduId1 || !kelompokForm.pemanduId2) return;
+    if (kelompokForm.pemanduId1 === kelompokForm.pemanduId2) {
+      alert("Pemandu 1 dan Pemandu 2 harus berbeda");
+      return;
+    }
+    const pemanduIds = [Number(kelompokForm.pemanduId1), Number(kelompokForm.pemanduId2)];
+    if (editingKelompok) {
+      local.updateKelompok(editingKelompok.id, {
+        name: kelompokForm.name.trim(),
+        pemanduIds,
+      });
+    } else {
+      local.addKelompok({
+        name: kelompokForm.name.trim(),
+        pemanduIds,
+      });
+    }
+    setShowKelompokForm(false);
+    setEditingKelompok(null);
+    setKelompokForm({ name: "", pemanduId1: "", pemanduId2: "" });
+    refreshData();
+  };
+
+  const handleDeleteKelompok = (id: number) => {
+    local.deleteKelompok(id);
     setDeleteConfirm(null);
     refreshData();
   };
@@ -356,34 +427,38 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Pemandu Mapping */}
+          {/* Pemandu Mapping — now Kelompok-based */}
           <TabsContent value="pemandu-mapping" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Tugaskan Pemandu ke Calon Anggota</CardTitle>
-                <CardDescription>Pilih pemandu dan calon anggota untuk membuat pemetaan baru</CardDescription>
+                <CardTitle>Tugaskan CUFO ke Kelompok</CardTitle>
+                <CardDescription>Pilih kelompok dan CUFO. CUFO akan otomatis ditugaskan ke 2 pemandu dalam kelompok tersebut.</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Pemandu</label>
-                    <Select value={selectedPemandu} onValueChange={setSelectedPemandu}>
-                      <SelectTrigger><SelectValue placeholder="Pilih pemandu" /></SelectTrigger>
+                    <label className="text-sm font-medium mb-2 block">Kelompok</label>
+                    <Select value={selectedKelompok} onValueChange={setSelectedKelompok}>
+                      <SelectTrigger><SelectValue placeholder="Pilih kelompok" /></SelectTrigger>
                       <SelectContent>
-                        {data.pemandus.map((m) => <SelectItem key={m.id} value={m.id.toString()}>{m.fullName}</SelectItem>)}
+                        {data.kelompokData.map((k: any) => (
+                          <SelectItem key={k.id} value={k.id.toString()}>
+                            {k.name} ({k.pemandu1Name} & {k.pemandu2Name})
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Calon Anggota (Belum Punya Pemandu)</label>
+                    <label className="text-sm font-medium mb-2 block">CUFO (Belum Ditugaskan)</label>
                     <Select value={selectedRegistrant} onValueChange={setSelectedRegistrant}>
-                      <SelectTrigger><SelectValue placeholder="Pilih calon anggota" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Pilih CUFO" /></SelectTrigger>
                       <SelectContent>
                         {data.unassigned.map((r) => <SelectItem key={r.id} value={r.id.toString()}>{r.fullName} ({r.year})</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleAssign} disabled={!selectedPemandu || !selectedRegistrant} className="bg-red-600 hover:bg-red-700"><LinkIcon className="h-4 w-4 mr-2" />Tugaskan</Button>
+                  <Button onClick={handleAssign} disabled={!selectedKelompok || !selectedRegistrant} className="bg-red-600 hover:bg-red-700"><LinkIcon className="h-4 w-4 mr-2" />Tugaskan</Button>
                 </div>
 
                 {data.pemanduStats.length > 0 && (
@@ -406,23 +481,24 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Daftar Pemetaan Aktif</CardTitle>
-                <CardDescription>Semua pemetaan pemandu - calon anggota</CardDescription>
+                <CardDescription>Semua pemetaan kelompok - CUFO (2 pemandu per kelompok)</CardDescription>
               </CardHeader>
               <CardContent>
                 {data.allAssignments.length > 0 ? (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow><TableHead>Pemandu</TableHead><TableHead>Calon Anggota</TableHead><TableHead>Angkatan</TableHead><TableHead>Jurusan</TableHead><TableHead>Aksi</TableHead></TableRow>
+                        <TableRow><TableHead>Kelompok</TableHead><TableHead>Pemandu</TableHead><TableHead>CUFO</TableHead><TableHead>Angkatan</TableHead><TableHead>Jurusan</TableHead><TableHead>Aksi</TableHead></TableRow>
                       </TableHeader>
                       <TableBody>
                         {data.allAssignments.map((a) => (
                           <TableRow key={a.assignmentId}>
-                            <TableCell className="font-medium">{a.pemanduName}</TableCell>
+                            <TableCell className="font-medium">{a.kelompokName}</TableCell>
+                            <TableCell className="text-xs text-gray-600">{a.pemanduNames}</TableCell>
                             <TableCell>{a.registrantName}</TableCell>
                             <TableCell>{a.registrantYear}</TableCell>
                             <TableCell>{a.registrantMajor}</TableCell>
-                            <TableCell><Button size="sm" variant="ghost" onClick={() => handleRemove(a.assignmentId)}><Unlink className="h-4 w-4 text-red-500" /></Button></TableCell>
+                            <TableCell><Button size="sm" variant="ghost" onClick={() => handleRemove(a.registrantId)}><Unlink className="h-4 w-4 text-red-500" /></Button></TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -471,6 +547,7 @@ export default function AdminDashboard() {
             {/* Sub-tabs */}
             <div className="flex gap-2 flex-wrap">
               {[
+                { key: "kelompok", label: "Kelompok", icon: UserCircle },
                 { key: "pemandu", label: "Pemandu", icon: Users },
                 { key: "verified", label: "Anggota Terverifikasi", icon: Shield },
                 { key: "locations", label: "Lokasi", icon: MapPin },
@@ -487,6 +564,53 @@ export default function AdminDashboard() {
                 </Button>
               ))}
             </div>
+
+            {/* ─── Kelompok Management ─── */}
+            {dmTab === "kelompok" && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div><CardTitle>Daftar Kelompok</CardTitle><CardDescription>Kelola kelompok CUFO (2 pemandu per kelompok)</CardDescription></div>
+                  <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => { setEditingKelompok(null); setKelompokForm({ name: "", pemanduId1: "", pemanduId2: "" }); setShowKelompokForm(true); }}>
+                    <Plus className="h-4 w-4 mr-1" />Tambah
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow><TableHead>Nama Kelompok</TableHead><TableHead>Pemandu 1</TableHead><TableHead>Pemandu 2</TableHead><TableHead>Jumlah CUFO</TableHead><TableHead>Aksi</TableHead></TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.kelompokData.map((k: any) => (
+                          <TableRow key={k.id}>
+                            <TableCell className="font-medium">{k.name}</TableCell>
+                            <TableCell>{k.pemandu1Name}</TableCell>
+                            <TableCell>{k.pemandu2Name}</TableCell>
+                            <TableCell>{k.cufoCount} CUFO</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => { setEditingKelompok(k); setKelompokForm({ name: k.name, pemanduId1: k.pemanduIds[0]?.toString() || "", pemanduId2: k.pemanduIds[1]?.toString() || "" }); setShowKelompokForm(true); }}>
+                                  <Edit3 className="h-3.5 w-3.5 text-blue-500" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ type: "kelompok", id: k.id })}>
+                                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {data.kelompokData.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <UserCircle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                      <p>Belum ada kelompok. Tambahkan kelompok terlebih dahulu.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* ─── Pemandu Management ─── */}
             {dmTab === "pemandu" && (
@@ -673,15 +797,44 @@ export default function AdminDashboard() {
               </DialogContent>
             </Dialog>
 
+            {/* ─── Kelompok Form Dialog ─── */}
+            <Dialog open={showKelompokForm} onOpenChange={setShowKelompokForm}>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>{editingKelompok ? "Edit Kelompok" : "Tambah Kelompok"}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div><Label>Nama Kelompok *</Label><Input value={kelompokForm.name} onChange={(e) => setKelompokForm({ ...kelompokForm, name: e.target.value })} placeholder="Contoh: Kelompok 1" /></div>
+                  <div><Label>Pemandu 1 *</Label>
+                    <select value={kelompokForm.pemanduId1} onChange={(e) => setKelompokForm({ ...kelompokForm, pemanduId1: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-md text-sm">
+                      <option value="">Pilih pemandu</option>
+                      {data.pemandus.map((p) => <option key={p.id} value={p.id.toString()}>{p.fullName}</option>)}
+                    </select>
+                  </div>
+                  <div><Label>Pemandu 2 *</Label>
+                    <select value={kelompokForm.pemanduId2} onChange={(e) => setKelompokForm({ ...kelompokForm, pemanduId2: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-md text-sm">
+                      <option value="">Pilih pemandu</option>
+                      {data.pemandus.map((p) => <option key={p.id} value={p.id.toString()}>{p.fullName}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowKelompokForm(false)}>Batal</Button>
+                    <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleSaveKelompok} disabled={!kelompokForm.name.trim() || !kelompokForm.pemanduId1 || !kelompokForm.pemanduId2}>
+                      {editingKelompok ? "Simpan Perubahan" : "Tambah Kelompok"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
             {/* ─── Delete Confirmation Dialog ─── */}
             <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
               <DialogContent className="max-w-sm">
                 <DialogHeader><DialogTitle>Konfirmasi Hapus</DialogTitle></DialogHeader>
-                <p className="text-sm text-gray-600">Apakah Anda yakin ingin menghapus {deleteConfirm?.type === "pemandu" ? "pemandu ini" : deleteConfirm?.type === "verified" ? "anggota terverifikasi ini" : "calon anggota ini"}? Data yang terkait juga akan dihapus.</p>
+                <p className="text-sm text-gray-600">Apakah Anda yakin ingin menghapus {deleteConfirm?.type === "kelompok" ? "kelompok ini" : deleteConfirm?.type === "pemandu" ? "pemandu ini" : deleteConfirm?.type === "verified" ? "anggota terverifikasi ini" : "calon anggota ini"}? Data yang terkait juga akan dihapus.</p>
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirm(null)}>Batal</Button>
                   <Button variant="destructive" className="flex-1" onClick={() => {
-                    if (deleteConfirm?.type === "pemandu") handleDeletePemandu(deleteConfirm.id);
+                    if (deleteConfirm?.type === "kelompok") handleDeleteKelompok(deleteConfirm.id);
+                    else if (deleteConfirm?.type === "pemandu") handleDeletePemandu(deleteConfirm.id);
                     else if (deleteConfirm?.type === "verified") handleDeleteVerified(deleteConfirm.id);
                     else if (deleteConfirm?.type === "registrant") handleDeleteRegistrant(deleteConfirm.id);
                   }}>Hapus</Button>

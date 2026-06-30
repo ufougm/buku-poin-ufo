@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   X,
   Check,
+  Image,
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
@@ -53,7 +54,7 @@ export default function PemanduDashboard() {
     return null;
   }, [user, local.pemandus]);
 
-  // Get CUFO for this pemandu
+  // Get CUFO for this pemandu (via kelompok or direct assignment)
   const cufos = useMemo(() => {
     if (!myPemandu) return [];
     return local.getCUFOByPemandu(myPemandu.id);
@@ -220,9 +221,9 @@ export default function PemanduDashboard() {
           </TabsContent>
         </Tabs>
 
-        {/* Activity Details Dialog */}
+        {/* Activity Details Dialog with Photos */}
         <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Detail Kegiatan</DialogTitle>
               <DialogDescription>Informasi lengkap mengenai kegiatan yang diajukan</DialogDescription>
@@ -236,8 +237,37 @@ export default function PemanduDashboard() {
                   <div><p className="text-sm text-gray-500">Poin</p><p className="font-medium">{selectedActivity.points}</p></div>
                   <div className="col-span-2"><p className="text-sm text-gray-500">Lokasi</p><p className="font-medium">{selectedActivity.location}</p></div>
                   {selectedActivity.role && <div className="col-span-2"><p className="text-sm text-gray-500">Peran</p><p className="font-medium">{selectedActivity.role}</p></div>}
-                  {selectedActivity.documentationUrl && <div className="col-span-2"><p className="text-sm text-gray-500">Dokumentasi</p><a href={selectedActivity.documentationUrl} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:underline text-sm break-all">{selectedActivity.documentationUrl}</a></div>}
                 </div>
+
+                {/* Documentation Photos */}
+                {selectedActivity.documentationImages && selectedActivity.documentationImages.length > 0 && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500 mb-2 flex items-center gap-1.5">
+                      <Image className="h-4 w-4" />
+                      Dokumentasi ({selectedActivity.documentationImages.length} foto)
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedActivity.documentationImages.map((img: string, idx: number) => (
+                        <div key={idx} className="rounded-lg overflow-hidden border border-gray-200">
+                          <img
+                            src={img}
+                            alt={`Dokumentasi ${idx + 1}`}
+                            className="w-full h-32 object-cover cursor-pointer hover:scale-105 transition-transform"
+                            onClick={() => window.open(img, "_blank")}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedActivity.documentationUrl && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-500">Link Dokumentasi</p>
+                    <a href={selectedActivity.documentationUrl} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:underline text-sm break-all">{selectedActivity.documentationUrl}</a>
+                  </div>
+                )}
+
                 <div>
                   <p className="text-sm text-gray-500 mb-2">Catatan Penolakan (opsional)</p>
                   <Textarea value={rejectionNote} onChange={(e) => setRejectionNote(e.target.value)} placeholder="Berikan alasan jika menolak..." />

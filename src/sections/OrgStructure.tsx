@@ -12,15 +12,14 @@ export default function OrgStructure() {
   ];
 
   const pengurusHarian = [
+    // Core board
     { name: "Naufal Reza Al Luthfi", role: "Ketua Umum" },
     { name: "Muhammad Naufal Hafizh", role: "Wakil Ketua Umum" },
     { name: "Nabiel Thoriq Ilyasa", role: "Sekretaris" },
     { name: "Narazahra Fadhilla Amalia", role: "Sekretaris" },
     { name: "Saskia Ainun Nisa", role: "Bendahara" },
     { name: "Jasmine Naila Faradina Maharani", role: "Bendahara" },
-  ];
-
-  const kepalaDivisi = [
+    // Division heads
     { name: "Awindya Ayuningtyas Ramadhani", role: "Kepala Divisi PSDM" },
     { name: "Naufal Arif Ardhiansyah", role: "Wakil Kepala Divisi PSDM" },
     { name: "Muhammad Alvin Fairiza", role: "Kepala Divisi Medfo" },
@@ -84,7 +83,6 @@ export default function OrgStructure() {
           <Section title="Pembina" icon={UserCheck} members={pembina} />
           <Section title="Dewan Penasihat Organisasi" icon={Users} members={dewanPenasihat} />
           <Section title="Pengurus Harian" icon={Users} members={pengurusHarian} />
-          <Section title="Kepala dan Wakil Kepala Divisi" icon={Users} members={kepalaDivisi} />
         </div>
       </div>
     </section>

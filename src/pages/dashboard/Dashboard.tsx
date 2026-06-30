@@ -236,6 +236,21 @@ export default function MemberDashboard() {
     const verifiedActivities = activities.filter((a) => a.status === "verified");
     const doc = new jsPDF();
 
+    // Resolve kelompok and pemandu info for this registrant
+    const kelompokName = local.getKelompokNameForRegistrant(myRegistrant.id);
+    const pemandus = local.getPemandusForRegistrant(myRegistrant.id);
+    const pemanduNames = pemandus.length > 0
+      ? pemandus.map((p) => p.fullName).join(" & ")
+      : "Belum ditugaskan";
+    // Resolve pemeriksa name from verifiedBy
+    const getPemeriksaName = (activity: any) => {
+      if (activity.verifiedBy) {
+        const p = local.getPemanduById(activity.verifiedBy);
+        if (p) return p.fullName;
+      }
+      return pemanduNames;
+    };
+
     // Title
     doc.setFontSize(18);
     doc.text("BUKU POIN UFO UGM", 105, 20, { align: "center" });
@@ -246,8 +261,8 @@ export default function MemberDashboard() {
     doc.setFontSize(10);
     const startY = 40;
     doc.text(`Nama     : ${myRegistrant.fullName}`, 14, startY);
-    doc.text(`Kelompok : [Nomor Kelompok]`, 14, startY + 6);
-    doc.text(`Pemandu  : [Nama Pemandu]`, 14, startY + 12);
+    doc.text(`Kelompok : ${kelompokName}`, 14, startY + 6);
+    doc.text(`Pemandu  : ${pemanduNames}`, 14, startY + 12);
 
     // Tabel Poin Header
     doc.setFontSize(11);
@@ -261,7 +276,7 @@ export default function MemberDashboard() {
         (i + 1).toString(),
         dateStr,
         a.activityName + (a.role ? ` (${a.role})` : ""),
-        "[Pemeriksa]",
+        getPemeriksaName(a),
         a.points.toString(),
         "Diterima",
       ];

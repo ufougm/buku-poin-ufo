@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
-import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 export default function Navbar() {
-  const { user, isAuthenticated, isPsdm, isPemandu, isUser, signOut } = useSupabaseAuth();
+  const { user, isAuthenticated, isPsdm, isMentor, isUser, logout } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -40,7 +40,7 @@ export default function Navbar() {
     ...(isAuthenticated
       ? [
           ...(isUser ? [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] : []),
-          ...(isPemandu ? [{ to: "/pemandu", label: "Dashboard Pemandu", icon: Users }] : []),
+          ...(isMentor ? [{ to: "/pemandu", label: "Dashboard Pemandu", icon: Users }] : []),
           ...(isPsdm ? [{ to: "/admin", label: "Panel PSDM", icon: Shield }] : []),
         ]
       : []),
@@ -94,11 +94,11 @@ export default function Navbar() {
               <>
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full">
                   <User className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-700 font-medium">{user?.full_name || "User"}</span>
+                  <span className="text-sm text-gray-700 font-medium">{user?.name || "User"}</span>
                   {isPsdm && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">PSDM</span>}
-                  {isPemandu && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
+                  {isMentor && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
                 </div>
-                <Button variant="ghost" size="sm" onClick={signOut} className="text-gray-500 hover:text-red-600">
+                <Button variant="ghost" size="sm" onClick={logout} className="text-gray-500 hover:text-red-600">
                   <LogOut className="h-4 w-4" />
                 </Button>
               </>
@@ -124,11 +124,11 @@ export default function Navbar() {
                 <div className="flex-1 p-4 space-y-1">
                   {isAuthenticated && (
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <p className="font-medium text-sm">{user?.full_name || "User"}</p>
+                      <p className="font-medium text-sm">{user?.name || "User"}</p>
                       <p className="text-xs text-gray-500">{user?.email}</p>
                       <div className="mt-2">
                         {isPsdm && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Admin PSDM</span>}
-                        {isPemandu && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
+                        {isMentor && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
                         {isUser && <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">Calon Anggota</span>}
                       </div>
                     </div>
@@ -145,7 +145,7 @@ export default function Navbar() {
                 </div>
                 <div className="p-4 border-t">
                   {isAuthenticated ? (
-                    <Button variant="outline" className="w-full" onClick={() => { signOut(); setMobileOpen(false); }}><LogOut className="h-4 w-4 mr-2" />Keluar</Button>
+                    <Button variant="outline" className="w-full" onClick={() => { logout(); setMobileOpen(false); }}><LogOut className="h-4 w-4 mr-2" />Keluar</Button>
                   ) : (
                     <Link to="/login" onClick={() => setMobileOpen(false)}><Button className="w-full bg-red-600 hover:bg-red-700">Masuk</Button></Link>
                   )}

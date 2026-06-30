@@ -1,6 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router";
-import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
-import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ProtectedRouteProps {
   allowedRoles?: string[];
@@ -11,16 +10,8 @@ export default function ProtectedRoute({
   allowedRoles,
   redirectTo = "/login",
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, role } = useSupabaseAuth();
+  const { isAuthenticated, role } = useAuth();
   const location = useLocation();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
-      </div>
-    );
-  }
 
   if (!isAuthenticated) {
     return <Navigate to={redirectTo} replace state={{ from: location.pathname }} />;

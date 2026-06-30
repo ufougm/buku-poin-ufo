@@ -4,19 +4,73 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogIn, UserPlus, ArrowLeft, Loader2 } from "lucide-react";
+import { LogIn, UserPlus, ArrowLeft, Loader2, ShieldCheck, Users, User } from "lucide-react";
 import { Link } from "react-router";
+import { verifyMember, autoCreateRegistrant, addPemandu, getPemandus, updatePemandu } from "@/hooks/useLocalData";
 
-function directLogin(name: string, email: string, role: string) {
-  const user = {
-    id: Math.floor(Math.random() * 9000) + 1000,
+// ─── Stored Users Management ──────────────────────────────────────
+interface StoredUser {
+  id: number;
+  name: string;
+  email: string;
+  password: string; // plain text for demo
+  role: "user" | "pemandu" | "psdm";
+  serialNumber?: string;
+  pemanduId?: number;
+}
+
+const USERS_KEY = "ukm_registered_users";
+
+function getStoredUsers(): StoredUser[] {
+  try {
+    const raw = localStorage.getItem(USERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveUser(user: StoredUser) {
+  const users = getStoredUsers();
+  const existing = users.findIndex((u) => u.email.toLowerCase() === user.email.toLowerCase());
+  if (existing >= 0) {
+    users[existing] = user;
+  } else {
+    users.push(user);
+  }
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function findUserByEmail(email: string): StoredUser | undefined {
+  return getStoredUsers().find((u) => u.email.toLowerCase() === email.toLowerCase());
+}
+
+// ─── Direct Login ─────────────────────────────────────────────────
+function directLogin(user: StoredUser) {
+  const sessionUser: any = {
+    id: user.id,
     unionId: `user_${Date.now()}`,
-    name: name.trim(),
-    email: email.trim(),
-    role,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    serialNumber: user.serialNumber,
   };
-  localStorage.setItem("ukm_mock_user", JSON.stringify(user));
-  window.location.href = "/#/dashboard";
+  if (user.pemanduId) sessionUser.pemanduId = user.pemanduId;
+  localStorage.setItem("ukm_mock_user", JSON.stringify(sessionUser));
+
+  // Auto-create registrant for Calon Anggota
+  if (user.role === "user") {
+    autoCreateRegistrant(user.name, user.email);
+  }
+
+  // Redirect based on role
+  if (user.role === "psdm") {
+    window.location.href = "#/admin";
+  } else if (user.role === "pemandu") {
+    window.location.href = "#/pemandu";
+  } else {
+    window.location.href = "#/dashboard";
+  }
 }
 
 export default function Login() {
@@ -24,32 +78,114 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState("user");
+  const [role, setRole] = useState<"user" | "pemandu" | "psdm">("user");
+  const [serialNumber, setSerialNumber] = useState("");
+  const [adminPin, setAdminPin] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
     if (!email.trim() || !password.trim()) {
       setError("Email dan password wajib diisi");
       return;
     }
-    setError("");
+
+    const user = findUserByEmail(email);
+    if (!user) {
+      setError("Email belum terdaftar. Silakan daftar terlebih dahulu.");
+      return;
+    }
+    if (user.password !== password) {
+      setError("Password salah.");
+      return;
+    }
+
     setLoading(true);
-    const displayName = name.trim() || email.split("@")[0];
-    directLogin(displayName, email, role);
+    directLogin(user);
   };
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { setError("Nama wajib diisi"); return; }
+    setError("");
+
+    // Basic validation
+    if (!name.trim()) { setError("Nama lengkap wajib diisi"); return; }
     if (!email.trim() || !password.trim()) {
       setError("Email dan password wajib diisi");
       return;
     }
-    setError("");
+    if (password.length < 6) {
+      setError("Password minimal 6 karakter");
+      return;
+    }
+
+    // Check if email already registered
+    if (findUserByEmail(email)) {
+      setError("Email sudah terdaftar. Silakan masuk.");
+      return;
+    }
+
+    // Role-specific validation
+    if (role === "pemandu" || role === "psdm") {
+      if (!serialNumber.trim()) {
+        setError("Nomor Seri Anggota wajib diisi untuk role ini");
+        return;
+      }
+      const verified = verifyMember(serialNumber.trim(), role, role === "psdm" ? adminPin : undefined);
+      if (!verified) {
+        if (role === "psdm") {
+          setError("Nomor Seri Anggota tidak valid atau PIN salah");
+        } else {
+          setError("Nomor Seri Anggota tidak terdaftar sebagai Pemandu");
+        }
+        return;
+      }
+    }
+
     setLoading(true);
-    directLogin(name.trim(), email, role);
+
+    // Create pemandu record if registering as pemandu
+    let pemanduId: number | undefined;
+    if (role === "pemandu") {
+      const verified = verifyMember(serialNumber.trim(), "pemandu");
+      if (verified) {
+        const existing = getPemandus().find((p) => p.email.toLowerCase() === email.trim().toLowerCase());
+        if (!existing) {
+          const newPemandu = addPemandu({
+            userId: 0,
+            fullName: name.trim(),
+            email: email.trim(),
+            expertise: "",
+            maxMentees: 10,
+          });
+          pemanduId = newPemandu.id;
+        } else {
+          pemanduId = existing.id;
+        }
+      }
+    }
+
+    // Create new user
+    const newUser: StoredUser = {
+      id: Math.floor(Math.random() * 9000) + 1000,
+      name: name.trim(),
+      email: email.trim(),
+      password,
+      role,
+      serialNumber: serialNumber.trim() || undefined,
+      pemanduId,
+    };
+
+    // Update pemandu userId if created
+    if (pemanduId) {
+      updatePemandu(pemanduId, { userId: newUser.id });
+    }
+
+    saveUser(newUser);
+    directLogin(newUser);
   };
 
   return (
@@ -126,6 +262,66 @@ export default function Login() {
 
               <TabsContent value="register">
                 <form onSubmit={handleRegister} className="space-y-4 mt-4">
+                  {/* Role Selection */}
+                  <div>
+                    <Label>Daftar Sebagai</Label>
+                    <div className="grid grid-cols-3 gap-2 mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => { setRole("user"); setError(""); }}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${
+                          role === "user"
+                            ? "border-red-500 bg-red-50 text-red-700"
+                            : "border-gray-200 text-gray-600 hover:border-red-300"
+                        }`}
+                      >
+                        <User className="h-4 w-4" />
+                        <span>Calon Anggota</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setRole("pemandu"); setError(""); }}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${
+                          role === "pemandu"
+                            ? "border-red-500 bg-red-50 text-red-700"
+                            : "border-gray-200 text-gray-600 hover:border-red-300"
+                        }`}
+                      >
+                        <Users className="h-4 w-4" />
+                        <span>Pemandu</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setRole("psdm"); setError(""); }}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${
+                          role === "psdm"
+                            ? "border-red-500 bg-red-50 text-red-700"
+                            : "border-gray-200 text-gray-600 hover:border-red-300"
+                        }`}
+                      >
+                        <ShieldCheck className="h-4 w-4" />
+                        <span>PSDM</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Role-specific notice */}
+                  {role === "user" && (
+                    <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                      Calon Anggota dapat mendaftar secara mandiri.
+                    </p>
+                  )}
+                  {role === "pemandu" && (
+                    <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded">
+                      Pemandu wajib memasukkan Nomor Seri Anggota yang valid.
+                    </p>
+                  )}
+                  {role === "psdm" && (
+                    <p className="text-xs text-red-700 bg-red-50 p-2 rounded">
+                      PSDM wajib memasukkan Nomor Seri Anggota dan PIN khusus.
+                    </p>
+                  )}
+
                   <div>
                     <Label>Nama Lengkap *</Label>
                     <Input
@@ -155,18 +351,40 @@ export default function Login() {
                       required
                     />
                   </div>
-                  <div>
-                    <Label>Role</Label>
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      className="w-full h-10 px-3 border border-gray-200 rounded-md text-sm"
-                    >
-                      <option value="user">Calon Anggota</option>
-                      <option value="pemandu">Pemandu</option>
-                      <option value="psdm">PSDM (Admin)</option>
-                    </select>
-                  </div>
+
+                  {/* Pemandu/PSDM: Nomor Seri Anggota */}
+                  {(role === "pemandu" || role === "psdm") && (
+                    <div>
+                      <Label>Nomor Seri Anggota *</Label>
+                      <Input
+                        value={serialNumber}
+                        onChange={(e) => setSerialNumber(e.target.value)}
+                        placeholder="Contoh: UFO-2024-001"
+                        required
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Masukkan Nomor Seri Anggota UFO Anda
+                      </p>
+                    </div>
+                  )}
+
+                  {/* PSDM only: Special PIN */}
+                  {role === "psdm" && (
+                    <div>
+                      <Label>PIN Khusus PSDM *</Label>
+                      <Input
+                        type="password"
+                        value={adminPin}
+                        onChange={(e) => setAdminPin(e.target.value)}
+                        placeholder="PIN dari admin"
+                        required
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Hubungi admin untuk mendapatkan PIN
+                      </p>
+                    </div>
+                  )}
+
                   <Button
                     type="submit"
                     className="w-full bg-red-600 hover:bg-red-700 h-11"

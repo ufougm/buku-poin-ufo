@@ -31,7 +31,21 @@ import {
   Link as LinkIcon,
   Unlink,
   XCircle,
+  Database,
+  Plus,
+  Trash2,
+  MapPin,
+  Edit3,
+  X,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 
 export default function AdminDashboard() {
@@ -40,6 +54,17 @@ export default function AdminDashboard() {
   const [selectedPemandu, setSelectedPemandu] = useState("");
   const [selectedRegistrant, setSelectedRegistrant] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
+
+  // Data Management state
+  const [dmTab, setDmTab] = useState<"pemandu" | "verified" | "locations" | "registrants">("pemandu");
+  const [showPemanduForm, setShowPemanduForm] = useState(false);
+  const [showVerifiedForm, setShowVerifiedForm] = useState(false);
+  const [editingPemandu, setEditingPemandu] = useState<any>(null);
+  const [editingVerified, setEditingVerified] = useState<any>(null);
+  const [newLocation, setNewLocation] = useState("");
+  const [pemanduForm, setPemanduForm] = useState({ fullName: "", email: "", expertise: "", maxMentees: 10 });
+  const [verifiedForm, setVerifiedForm] = useState({ serialNumber: "", fullName: "", email: "", role: "pemandu" as "pemandu" | "psdm" });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: any } | null>(null);
 
   // Get data from localStorage
   const data = useMemo(() => {
@@ -99,8 +124,8 @@ export default function AdminDashboard() {
 
     // Pemandu stats
     const pemanduStats = pemandus.map((m) => {
-      const menteeCount = assignments.filter((a) => a.pemanduId === m.id).length;
-      return { pemanduId: m.id, pemanduName: m.fullName, menteeCount, maxMentees: m.maxMentees };
+      const cufoCount = assignments.filter((a) => a.pemanduId === m.id).length;
+      return { pemanduId: m.id, pemanduName: m.fullName, cufoCount, maxMentees: m.maxMentees };
     });
 
     // All assignments with names
@@ -124,6 +149,91 @@ export default function AdminDashboard() {
   const handleRemove = (assignmentId: number) => {
     local.removeAssignment(assignmentId);
     setRefreshTick((t) => t + 1);
+  };
+
+  // ─── Data Management Handlers ────────────────────────────────────
+  const refreshData = () => setRefreshTick((t) => t + 1);
+
+  const handleSavePemandu = () => {
+    if (!pemanduForm.fullName.trim() || !pemanduForm.email.trim()) return;
+    if (editingPemandu) {
+      local.updatePemandu(editingPemandu.id, {
+        fullName: pemanduForm.fullName.trim(),
+        email: pemanduForm.email.trim(),
+        expertise: pemanduForm.expertise.trim(),
+        maxMentees: Number(pemanduForm.maxMentees) || 10,
+      });
+    } else {
+      local.addPemandu({
+        userId: 0,
+        fullName: pemanduForm.fullName.trim(),
+        email: pemanduForm.email.trim(),
+        expertise: pemanduForm.expertise.trim(),
+        maxMentees: Number(pemanduForm.maxMentees) || 10,
+      });
+    }
+    setShowPemanduForm(false);
+    setEditingPemandu(null);
+    setPemanduForm({ fullName: "", email: "", expertise: "", maxMentees: 10 });
+    refreshData();
+  };
+
+  const handleDeletePemandu = (id: number) => {
+    local.deletePemandu(id);
+    setDeleteConfirm(null);
+    refreshData();
+  };
+
+  const handleSaveVerified = () => {
+    if (!verifiedForm.serialNumber.trim() || !verifiedForm.fullName.trim()) return;
+    if (editingVerified) {
+      local.updateVerifiedMember(editingVerified.serialNumber, {
+        serialNumber: verifiedForm.serialNumber.trim(),
+        fullName: verifiedForm.fullName.trim(),
+        email: verifiedForm.email.trim(),
+        role: verifiedForm.role,
+      });
+    } else {
+      try {
+        local.addVerifiedMember({
+          serialNumber: verifiedForm.serialNumber.trim(),
+          fullName: verifiedForm.fullName.trim(),
+          email: verifiedForm.email.trim(),
+          role: verifiedForm.role,
+        });
+      } catch (e: any) {
+        alert(e.message);
+        return;
+      }
+    }
+    setShowVerifiedForm(false);
+    setEditingVerified(null);
+    setVerifiedForm({ serialNumber: "", fullName: "", email: "", role: "pemandu" });
+    refreshData();
+  };
+
+  const handleDeleteVerified = (serialNumber: string) => {
+    local.deleteVerifiedMember(serialNumber);
+    setDeleteConfirm(null);
+    refreshData();
+  };
+
+  const handleAddLocation = () => {
+    if (!newLocation.trim()) return;
+    local.addLocation(newLocation.trim());
+    setNewLocation("");
+    refreshData();
+  };
+
+  const handleDeleteLocation = (name: string) => {
+    local.deleteLocation(name);
+    refreshData();
+  };
+
+  const handleDeleteRegistrant = (id: number) => {
+    local.deleteRegistrant(id);
+    setDeleteConfirm(null);
+    refreshData();
   };
 
   const getStatusBadge = (status: string) => {
@@ -171,6 +281,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="overview"><BarChart3 className="h-4 w-4 mr-2" />Overview</TabsTrigger>
             <TabsTrigger value="pemandu-mapping"><LinkIcon className="h-4 w-4 mr-2" />Pemetaan Pemandu</TabsTrigger>
             <TabsTrigger value="activities"><Activity className="h-4 w-4 mr-2" />Kegiatan</TabsTrigger>
+            <TabsTrigger value="data-management"><Database className="h-4 w-4 mr-2" />Manajemen Data</TabsTrigger>
           </TabsList>
 
           {/* Overview */}
@@ -279,11 +390,11 @@ export default function AdminDashboard() {
                   <div className="mt-6">
                     <h4 className="text-sm font-medium mb-3">Kapasitas Pemandu</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {data.pemanduStats.map((ms) => (
-                        <div key={ms.pemanduId} className={`p-3 rounded-lg border ${ms.menteeCount >= ms.maxMentees ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
+                      {data.pemanduStats.map((ms: any) => (
+                        <div key={ms.pemanduId} className={`p-3 rounded-lg border ${ms.cufoCount >= ms.maxMentees ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
                           <p className="text-sm font-medium truncate">{ms.pemanduName}</p>
-                          <p className="text-xs text-gray-500">{ms.menteeCount} / {ms.maxMentees} mentee</p>
-                          <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div className={`h-1.5 rounded-full ${ms.menteeCount >= ms.maxMentees ? "bg-red-500" : "bg-red-500"}`} style={{ width: `${Math.min((ms.menteeCount / ms.maxMentees) * 100, 100)}%` }} /></div>
+                          <p className="text-xs text-gray-500">{ms.cufoCount} / {ms.maxMentees} CUFO</p>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div className={`h-1.5 rounded-full ${ms.cufoCount >= ms.maxMentees ? "bg-red-500" : "bg-red-500"}`} style={{ width: `${Math.min((ms.cufoCount / ms.maxMentees) * 100, 100)}%` }} /></div>
                         </div>
                       ))}
                     </div>
@@ -353,6 +464,230 @@ export default function AdminDashboard() {
                 ) : <p className="text-center text-gray-500 py-8">Belum ada kegiatan</p>}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Data Management */}
+          <TabsContent value="data-management" className="space-y-6">
+            {/* Sub-tabs */}
+            <div className="flex gap-2 flex-wrap">
+              {[
+                { key: "pemandu", label: "Pemandu", icon: Users },
+                { key: "verified", label: "Anggota Terverifikasi", icon: Shield },
+                { key: "locations", label: "Lokasi", icon: MapPin },
+                { key: "registrants", label: "Calon Anggota", icon: Users },
+              ].map((t) => (
+                <Button
+                  key={t.key}
+                  variant={dmTab === t.key ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setDmTab(t.key as any)}
+                  className={dmTab === t.key ? "bg-red-600 hover:bg-red-700" : ""}
+                >
+                  <t.icon className="h-4 w-4 mr-1.5" />{t.label}
+                </Button>
+              ))}
+            </div>
+
+            {/* ─── Pemandu Management ─── */}
+            {dmTab === "pemandu" && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div><CardTitle>Daftar Pemandu</CardTitle><CardDescription>Kelola pemandu yang bertanggung jawab atas CUFO</CardDescription></div>
+                  <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => { setEditingPemandu(null); setPemanduForm({ fullName: "", email: "", expertise: "", maxMentees: 10 }); setShowPemanduForm(true); }}>
+                    <Plus className="h-4 w-4 mr-1" />Tambah
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow><TableHead>Nama</TableHead><TableHead>Email</TableHead><TableHead>Keahlian</TableHead><TableHead>Kapasitas</TableHead><TableHead>Aksi</TableHead></TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.pemandus.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-medium">{p.fullName}</TableCell>
+                            <TableCell>{p.email}</TableCell>
+                            <TableCell>{p.expertise || "-"}</TableCell>
+                            <TableCell>{p.maxMentees} CUFO</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => { setEditingPemandu(p); setPemanduForm({ fullName: p.fullName, email: p.email, expertise: p.expertise || "", maxMentees: p.maxMentees }); setShowPemanduForm(true); }}>
+                                  <Edit3 className="h-3.5 w-3.5 text-blue-500" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ type: "pemandu", id: p.id })}>
+                                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ─── Verified Members Management ─── */}
+            {dmTab === "verified" && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div><CardTitle>Anggota Terverifikasi</CardTitle><CardDescription>Daftar orang yang boleh mendaftar sebagai Pemandu atau PSDM</CardDescription></div>
+                  <Button size="sm" className="bg-red-600 hover:bg-red-700" onClick={() => { setEditingVerified(null); setVerifiedForm({ serialNumber: "", fullName: "", email: "", role: "pemandu" }); setShowVerifiedForm(true); }}>
+                    <Plus className="h-4 w-4 mr-1" />Tambah
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow><TableHead>Nomor Seri</TableHead><TableHead>Nama</TableHead><TableHead>Email</TableHead><TableHead>Role</TableHead><TableHead>Aksi</TableHead></TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {local.verifiedMembers.map((v) => (
+                          <TableRow key={v.serialNumber}>
+                            <TableCell className="font-mono text-xs">{v.serialNumber}</TableCell>
+                            <TableCell className="font-medium">{v.fullName}</TableCell>
+                            <TableCell>{v.email}</TableCell>
+                            <TableCell><Badge className={v.role === "psdm" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}>{v.role === "psdm" ? "PSDM" : "Pemandu"}</Badge></TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => { setEditingVerified(v); setVerifiedForm({ serialNumber: v.serialNumber, fullName: v.fullName, email: v.email, role: v.role }); setShowVerifiedForm(true); }}>
+                                  <Edit3 className="h-3.5 w-3.5 text-blue-500" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ type: "verified", id: v.serialNumber })}>
+                                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ─── Locations Management ─── */}
+            {dmTab === "locations" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" />Daftar Lokasi</CardTitle>
+                  <CardDescription>Kelola lokasi yang muncul di autocomplete saat input kegiatan</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="Nama lokasi baru..." onKeyDown={(e) => e.key === "Enter" && handleAddLocation()} />
+                    <Button onClick={handleAddLocation} className="bg-red-600 hover:bg-red-700"><Plus className="h-4 w-4 mr-1" />Tambah</Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {local.locations.map((loc) => (
+                      <div key={loc} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+                        <span className="text-sm truncate pr-2">{loc}</span>
+                        <button onClick={() => handleDeleteLocation(loc)} className="text-gray-400 hover:text-red-500 shrink-0">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ─── Registrants Management ─── */}
+            {dmTab === "registrants" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" />Daftar Calon Anggota</CardTitle>
+                  <CardDescription>Kelola calon anggota yang terdaftar di sistem</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow><TableHead>Nama</TableHead><TableHead>Email</TableHead><TableHead>Angkatan</TableHead><TableHead>Jurusan</TableHead><TableHead>Aksi</TableHead></TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.registrants.map((r) => (
+                          <TableRow key={r.id}>
+                            <TableCell className="font-medium">{r.fullName}</TableCell>
+                            <TableCell>{r.email}</TableCell>
+                            <TableCell>{r.year}</TableCell>
+                            <TableCell>{r.major}</TableCell>
+                            <TableCell>
+                              <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ type: "registrant", id: r.id })}>
+                                <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ─── Pemandu Form Dialog ─── */}
+            <Dialog open={showPemanduForm} onOpenChange={setShowPemanduForm}>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>{editingPemandu ? "Edit Pemandu" : "Tambah Pemandu"}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div><Label>Nama Lengkap *</Label><Input value={pemanduForm.fullName} onChange={(e) => setPemanduForm({ ...pemanduForm, fullName: e.target.value })} placeholder="Nama pemandu" /></div>
+                  <div><Label>Email *</Label><Input type="email" value={pemanduForm.email} onChange={(e) => setPemanduForm({ ...pemanduForm, email: e.target.value })} placeholder="email@ugm.ac.id" /></div>
+                  <div><Label>Keahlian</Label><Input value={pemanduForm.expertise} onChange={(e) => setPemanduForm({ ...pemanduForm, expertise: e.target.value })} placeholder="Contoh: Fotografi Jurnalistik" /></div>
+                  <div><Label>Kapasitas CUFO</Label><Input type="number" value={pemanduForm.maxMentees} onChange={(e) => setPemanduForm({ ...pemanduForm, maxMentees: Number(e.target.value) })} /></div>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowPemanduForm(false)}>Batal</Button>
+                    <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleSavePemandu} disabled={!pemanduForm.fullName.trim() || !pemanduForm.email.trim()}>
+                      {editingPemandu ? "Simpan Perubahan" : "Tambah Pemandu"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* ─── Verified Member Form Dialog ─── */}
+            <Dialog open={showVerifiedForm} onOpenChange={setShowVerifiedForm}>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>{editingVerified ? "Edit Anggota Terverifikasi" : "Tambah Anggota Terverifikasi"}</DialogTitle></DialogHeader>
+                <div className="space-y-4">
+                  <div><Label>Nomor Seri Anggota *</Label><Input value={verifiedForm.serialNumber} onChange={(e) => setVerifiedForm({ ...verifiedForm, serialNumber: e.target.value })} placeholder="Contoh: UFO-2024-003" disabled={!!editingVerified} /></div>
+                  <div><Label>Nama Lengkap *</Label><Input value={verifiedForm.fullName} onChange={(e) => setVerifiedForm({ ...verifiedForm, fullName: e.target.value })} placeholder="Nama lengkap" /></div>
+                  <div><Label>Email</Label><Input type="email" value={verifiedForm.email} onChange={(e) => setVerifiedForm({ ...verifiedForm, email: e.target.value })} placeholder="email@ugm.ac.id" /></div>
+                  <div><Label>Role</Label>
+                    <select value={verifiedForm.role} onChange={(e) => setVerifiedForm({ ...verifiedForm, role: e.target.value as "pemandu" | "psdm" })} className="w-full h-10 px-3 border border-gray-200 rounded-md text-sm">
+                      <option value="pemandu">Pemandu</option>
+                      <option value="psdm">PSDM (Admin)</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowVerifiedForm(false)}>Batal</Button>
+                    <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleSaveVerified} disabled={!verifiedForm.serialNumber.trim() || !verifiedForm.fullName.trim()}>
+                      {editingVerified ? "Simpan Perubahan" : "Tambah"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* ─── Delete Confirmation Dialog ─── */}
+            <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader><DialogTitle>Konfirmasi Hapus</DialogTitle></DialogHeader>
+                <p className="text-sm text-gray-600">Apakah Anda yakin ingin menghapus {deleteConfirm?.type === "pemandu" ? "pemandu ini" : deleteConfirm?.type === "verified" ? "anggota terverifikasi ini" : "calon anggota ini"}? Data yang terkait juga akan dihapus.</p>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirm(null)}>Batal</Button>
+                  <Button variant="destructive" className="flex-1" onClick={() => {
+                    if (deleteConfirm?.type === "pemandu") handleDeletePemandu(deleteConfirm.id);
+                    else if (deleteConfirm?.type === "verified") handleDeleteVerified(deleteConfirm.id);
+                    else if (deleteConfirm?.type === "registrant") handleDeleteRegistrant(deleteConfirm.id);
+                  }}>Hapus</Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
         </Tabs>
       </div>

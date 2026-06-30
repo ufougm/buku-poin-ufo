@@ -1,49 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { MapPin, X } from "lucide-react";
-
-const COMMON_LOCATIONS = [
-  "Sekretariat UFO UGM",
-  "Sekretariat Bersama N58 UGM",
-  "Auditorium FMIPA UGM",
-  "Grha Sabha Pramana UGM",
-  "Balairung UGM",
-  "Perpustakaan Pusat UGM",
-  "Museum UGM",
-  "Taman Budaya Yogyakarta",
-  "Jogja National Museum",
-  "Galeri Nasional Indonesia Yogyakarta",
-  "Taman Sari Yogyakarta",
-  "Candi Prambanan",
-  "Candi Borobudur",
-  "Malioboro",
-  "Taman Pelangi Jogja",
-  "Lapangan Pancasila UGM",
-  "Gelanggang Mahasiswa UGM",
-  "Fakultas Ilmu Budaya UGM",
-  "Fakultas Teknik UGM",
-  "Fakultas Ekonomi dan Bisnis UGM",
-  "Fakultas Filsafat UGM",
-  "Fakultas Hukum UGM",
-  "Fakultas Psikologi UGM",
-  "Fakultas Farmasi UGM",
-  "Fakultas Kedokteran Hewan UGM",
-  "Fakultas Kehutanan UGM",
-  "Fakultas Pertanian UGM",
-  "Fakultas Peternakan UGM",
-  "Fakultas MIPA UGM",
-  "Fakultas Seni Rupa dan Desain ISI Yogyakarta",
-  "Pendopo Agung UGM",
-  "Ruang Multimedia UGM",
-  "Auditorium Fakultas Teknik UGM",
-  "Alun-Alun Selatan Yogyakarta",
-  "Kampung Wisata Taman Sari",
-  "Kotagede",
-  "Benteng Vredeburg",
-  "Keraton Yogyakarta",
-  "Stasiun Tugu Yogyakarta",
-  "Stasiun Lempuyangan",
-  "Bandara Adisutjipto",
-];
+import { getLocations } from "@/hooks/useLocalData";
 
 interface LocationSuggestProps {
   value: string;
@@ -60,8 +17,11 @@ export default function LocationSuggest({ value, onChange, placeholder }: Locati
     setInputValue(value);
   }, [value]);
 
+  // Read locations from localStorage
+  const allLocations = useMemo(() => getLocations(), []);
+
   const filtered = inputValue.trim()
-    ? COMMON_LOCATIONS.filter((loc) =>
+    ? allLocations.filter((loc) =>
         loc.toLowerCase().includes(inputValue.toLowerCase())
       ).slice(0, 6)
     : [];

@@ -102,18 +102,18 @@ export function useSupabaseData() {
 
   const getPendingActivitiesForMentor = useCallback(async (mentorId: number) => {
     if (IS_DEMO) return [];
-    // Get mentor's mentees
+    // Get mentor's CUFOs
     const { data: assignments } = await supabase
       .from("mentor_assignments")
       .select("registrant_id")
       .eq("mentor_id", mentorId);
     if (!assignments?.length) return [];
-    const menteeIds = assignments.map((a) => a.registrant_id);
+    const cufoIds = assignments.map((a) => a.registrant_id);
     const { data } = await supabase
       .from("activities")
       .select("*, activity_types(name), registrants(full_name)")
       .eq("status", "pending")
-      .in("registrant_id", menteeIds)
+      .in("registrant_id", cufoIds)
       .order("submitted_at", { ascending: false });
     return (data as any[])?.map((a) => ({
       ...a,
@@ -196,7 +196,7 @@ export function useSupabaseData() {
     })) || [];
   }, [tick]);
 
-  const getMenteesByMentor = useCallback(async (mentorId: number) => {
+  const getCUFOByMentor = useCallback(async (mentorId: number) => {
     if (IS_DEMO) return [];
     const { data } = await supabase
       .from("mentor_assignments")
@@ -211,6 +211,8 @@ export function useSupabaseData() {
       registrant_major: a.registrants?.major,
     })) || [];
   }, [tick]);
+  /** @deprecated Use getCUFOByMentor */
+  const getMenteesByMentor = getCUFOByMentor;
 
   const getUnassignedRegistrants = useCallback(async () => {
     if (IS_DEMO) return [];

@@ -53,32 +53,32 @@ export default function PemanduDashboard() {
     return null;
   }, [user, local.pemandus]);
 
-  // Get mentees for this pemandu
-  const mentees = useMemo(() => {
+  // Get CUFO for this pemandu
+  const cufos = useMemo(() => {
     if (!myPemandu) return [];
-    return local.getMenteesByPemandu(myPemandu.id);
+    return local.getCUFOByPemandu(myPemandu.id);
   }, [myPemandu, refreshTick]);
 
-  // Get pending activities for mentees
+  // Get pending activities for CUFO
   const pendingActivities = useMemo(() => {
-    if (!myPemandu || mentees.length === 0) return [];
-    const menteeIds = mentees.map((m) => m!.registrantId);
+    if (!myPemandu || cufos.length === 0) return [];
+    const cufoIds = cufos.map((m) => m!.registrantId);
     return local.activities
-      .filter((a) => menteeIds.includes(a.registrantId) && a.status === "pending")
+      .filter((a) => cufoIds.includes(a.registrantId) && a.status === "pending")
       .map((a) => {
         const reg = local.registrants.find((r) => r.id === a.registrantId);
         const atype = local.activityTypes.find((t) => t.id === a.activityTypeId);
         return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
       })
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-  }, [myPemandu, mentees, refreshTick]);
+  }, [myPemandu, cufos, refreshTick]);
 
-  // Count verified activities for mentees
+  // Count verified activities for CUFO
   const verifiedCount = useMemo(() => {
-    if (!myPemandu || mentees.length === 0) return 0;
-    const menteeIds = mentees.map((m) => m!.registrantId);
-    return local.activities.filter((a) => menteeIds.includes(a.registrantId) && a.status === "verified").length;
-  }, [myPemandu, mentees, refreshTick]);
+    if (!myPemandu || cufos.length === 0) return 0;
+    const cufoIds = cufos.map((m) => m!.registrantId);
+    return local.activities.filter((a) => cufoIds.includes(a.registrantId) && a.status === "verified").length;
+  }, [myPemandu, cufos, refreshTick]);
 
   const handleApprove = (activityId: number) => {
     local.updateActivity(activityId, { status: "verified", verifiedAt: new Date().toISOString(), verifiedBy: myPemandu?.id });
@@ -108,7 +108,7 @@ export default function PemanduDashboard() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Jumlah Mentee</p><p className="text-2xl font-bold">{mentees.length}</p></div><Users className="h-8 w-8 text-red-600" /></div></CardContent></Card>
+          <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Jumlah CUFO</p><p className="text-2xl font-bold">{cufos.length}</p></div><Users className="h-8 w-8 text-red-600" /></div></CardContent></Card>
           <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Menunggu</p><p className="text-2xl font-bold text-yellow-600">{pendingActivities.length}</p></div><Clock className="h-8 w-8 text-yellow-600" /></div></CardContent></Card>
           <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Terverifikasi</p><p className="text-2xl font-bold text-green-600">{verifiedCount}</p></div><ShieldCheck className="h-8 w-8 text-green-600" /></div></CardContent></Card>
           <Card><CardContent className="p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">Total Kegiatan</p><p className="text-2xl font-bold">{verifiedCount + pendingActivities.length}</p></div><FileText className="h-8 w-8 text-gray-600" /></div></CardContent></Card>
@@ -121,9 +121,9 @@ export default function PemanduDashboard() {
               Menunggu Verifikasi
               {pendingActivities.length > 0 && <Badge variant="secondary" className="ml-2">{pendingActivities.length}</Badge>}
             </TabsTrigger>
-            <TabsTrigger value="mentees">
+            <TabsTrigger value="cufos">
               <Users className="h-4 w-4 mr-2" />
-              Daftar Mentee
+              Daftar CUFO
             </TabsTrigger>
           </TabsList>
 
@@ -131,7 +131,7 @@ export default function PemanduDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Kegiatan Menunggu Verifikasi</CardTitle>
-                <CardDescription>Review dan verifikasi kegiatan yang diajukan oleh mentee Anda</CardDescription>
+                <CardDescription>Review dan verifikasi kegiatan yang diajukan oleh CUFO Anda</CardDescription>
               </CardHeader>
               <CardContent>
                 {pendingActivities.length > 0 ? (
@@ -139,7 +139,7 @@ export default function PemanduDashboard() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Nama Mentee</TableHead>
+                          <TableHead>Nama CUFO</TableHead>
                           <TableHead>Nama Kegiatan</TableHead>
                           <TableHead>Jenis</TableHead>
                           <TableHead>Tanggal</TableHead>
@@ -180,28 +180,28 @@ export default function PemanduDashboard() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="mentees">
+          <TabsContent value="cufos">
             <Card>
               <CardHeader>
-                <CardTitle>Daftar Mentee</CardTitle>
+                <CardTitle>Daftar CUFO</CardTitle>
                 <CardDescription>Calon anggota yang berada di bawah bimbingan Anda</CardDescription>
               </CardHeader>
               <CardContent>
-                {mentees.length > 0 ? (
+                {cufos.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {mentees.filter(Boolean).map((mentee: any) => (
-                      <Card key={mentee.registrantId} className="hover:shadow-md transition-shadow">
+                    {cufos.filter(Boolean).map((cufo: any) => (
+                      <Card key={cufo.registrantId} className="hover:shadow-md transition-shadow">
                         <CardContent className="p-4">
                           <div className="flex items-start gap-3">
                             <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
                               <Users className="h-5 w-5 text-red-600" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 truncate">{mentee.registrantName}</p>
-                              <p className="text-sm text-gray-500">{mentee.registrantEmail}</p>
+                              <p className="font-medium text-gray-900 truncate">{cufo.registrantName}</p>
+                              <p className="text-sm text-gray-500">{cufo.registrantEmail}</p>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">{mentee.registrantYear}</Badge>
-                                <span className="text-xs text-gray-400">{mentee.registrantMajor}</span>
+                                <Badge variant="outline" className="text-xs">{cufo.registrantYear}</Badge>
+                                <span className="text-xs text-gray-400">{cufo.registrantMajor}</span>
                               </div>
                             </div>
                           </div>
@@ -212,7 +212,7 @@ export default function PemanduDashboard() {
                 ) : (
                   <div className="text-center py-12">
                     <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">Belum ada mentee yang ditugaskan</p>
+                    <p className="text-gray-500">Belum ada CUFO yang ditugaskan</p>
                   </div>
                 )}
               </CardContent>
@@ -230,7 +230,7 @@ export default function PemanduDashboard() {
             {selectedActivity && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div><p className="text-sm text-gray-500">Nama Mentee</p><p className="font-medium">{selectedActivity.registrantName}</p></div>
+                  <div><p className="text-sm text-gray-500">Nama CUFO</p><p className="font-medium">{selectedActivity.registrantName}</p></div>
                   <div><p className="text-sm text-gray-500">Jenis Kegiatan</p><p className="font-medium">{selectedActivity.activityTypeName}</p></div>
                   <div><p className="text-sm text-gray-500">Tanggal</p><p className="font-medium">{format(new Date(selectedActivity.activityDate), "dd MMMM yyyy", { locale: id })}</p></div>
                   <div><p className="text-sm text-gray-500">Poin</p><p className="font-medium">{selectedActivity.points}</p></div>

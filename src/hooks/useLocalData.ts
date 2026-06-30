@@ -13,7 +13,7 @@ export interface LocalRegistrant {
   createdAt: string;
 }
 
-export interface LocalMentor {
+export interface LocalPemandu {
   id: number;
   userId: number;
   fullName: string;
@@ -22,6 +22,8 @@ export interface LocalMentor {
   maxMentees: number;
   status: "active" | "inactive";
 }
+/** @deprecated Use LocalPemandu */
+export type LocalMentor = LocalPemandu;
 
 export interface LocalActivity {
   id: number;
@@ -42,12 +44,14 @@ export interface LocalActivity {
   verifiedBy?: number;
 }
 
-export interface LocalMentorAssignment {
+export interface LocalPemanduAssignment {
   id: number;
-  mentorId: number;
+  pemanduId: number;
   registrantId: number;
   assignedAt: string;
 }
+/** @deprecated Use LocalPemanduAssignment */
+export type LocalMentorAssignment = LocalPemanduAssignment;
 
 // ─── Keys ─────────────────────────────────────────────────────────
 const KEYS = {
@@ -56,6 +60,8 @@ const KEYS = {
   activities: "ukm_activities",
   assignments: "ukm_assignments",
   activityTypes: "ukm_activity_types",
+  verifiedMembers: "ukm_verified_members",
+  locations: "ukm_locations",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────
@@ -133,25 +139,25 @@ export function seedDemoData() {
   ];
   setItem(KEYS.registrants, registrants);
 
-  // Mentors (2 mentors)
-  const mentors: LocalMentor[] = [
+  // Pemandu (2 pemandu)
+  const pemandus: LocalPemandu[] = [
     { id: genId(), userId: 9001, fullName: "Dr. Budi Santoso, M.Sn.", email: "budi.santoso@ugm.ac.id", expertise: "Fotografi Jurnalistik", maxMentees: 10, status: "active" },
     { id: genId(), userId: 9002, fullName: "Rina Amelia, M.Ds.", email: "rina.amelia@ugm.ac.id", expertise: "Fotografi Komersial", maxMentees: 10, status: "active" },
   ];
-  setItem(KEYS.mentors, mentors);
+  setItem(KEYS.mentors, pemandus);
 
-  // Assignments (5 to mentor 1, 5 to mentor 2)
-  const assignments: LocalMentorAssignment[] = [
-    { id: genId(), mentorId: mentors[0].id, registrantId: registrants[0].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[0].id, registrantId: registrants[1].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[0].id, registrantId: registrants[2].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[0].id, registrantId: registrants[3].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[0].id, registrantId: registrants[4].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[1].id, registrantId: registrants[5].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[1].id, registrantId: registrants[6].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[1].id, registrantId: registrants[7].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[1].id, registrantId: registrants[8].id, assignedAt: new Date().toISOString() },
-    { id: genId(), mentorId: mentors[1].id, registrantId: registrants[9].id, assignedAt: new Date().toISOString() },
+  // Assignments (5 to pemandu 1, 5 to pemandu 2)
+  const assignments: LocalPemanduAssignment[] = [
+    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[0].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[1].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[2].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[3].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[0].id, registrantId: registrants[4].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[5].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[6].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[7].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[8].id, assignedAt: new Date().toISOString() },
+    { id: genId(), pemanduId: pemandus[1].id, registrantId: registrants[9].id, assignedAt: new Date().toISOString() },
   ];
   setItem(KEYS.assignments, assignments);
 
@@ -225,9 +231,11 @@ export function getRegistrantById(id: number): LocalRegistrant | undefined {
   return getRegistrants().find((r) => r.id === id);
 }
 
-export function getMentors(): LocalMentor[] {
-  return getItem<LocalMentor[]>(KEYS.mentors, []);
+export function getPemandus(): LocalPemandu[] {
+  return getItem<LocalPemandu[]>(KEYS.mentors, []);
 }
+/** @deprecated Use getPemandus */
+export const getMentors = getPemandus;
 
 export function getActivities(): LocalActivity[] {
   return getItem<LocalActivity[]>(KEYS.activities, []);
@@ -252,15 +260,15 @@ export function getActivitiesByRegistrant(registrantId: number): LocalActivity[]
     .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
 }
 
-export function getAssignments(): LocalMentorAssignment[] {
-  return getItem<LocalMentorAssignment[]>(KEYS.assignments, []);
+export function getAssignments(): LocalPemanduAssignment[] {
+  return getItem<LocalPemanduAssignment[]>(KEYS.assignments, []);
 }
 
-export function addAssignment(mentorId: number, registrantId: number): LocalMentorAssignment {
+export function addAssignment(pemanduId: number, registrantId: number): LocalPemanduAssignment {
   const all = getAssignments();
   // Remove existing assignment for this registrant
   const filtered = all.filter((a) => a.registrantId !== registrantId);
-  const item: LocalMentorAssignment = { id: genId(), mentorId, registrantId, assignedAt: new Date().toISOString() };
+  const item: LocalPemanduAssignment = { id: genId(), pemanduId, registrantId, assignedAt: new Date().toISOString() };
   setItem(KEYS.assignments, [...filtered, item]);
   return item;
 }
@@ -270,8 +278,8 @@ export function removeAssignment(assignmentId: number) {
   setItem(KEYS.assignments, all);
 }
 
-export function getMenteesByMentor(mentorId: number) {
-  const assignments = getAssignments().filter((a) => a.mentorId === mentorId);
+export function getCUFOByPemandu(pemanduId: number) {
+  const assignments = getAssignments().filter((a) => a.pemanduId === pemanduId);
   const registrants = getRegistrants();
   return assignments
     .map((a) => {
@@ -280,14 +288,18 @@ export function getMenteesByMentor(mentorId: number) {
     })
     .filter(Boolean);
 }
+/** @deprecated Use getCUFOByPemandu */
+export const getMenteesByMentor = getCUFOByPemandu;
 
 export function getAssignmentForRegistrant(registrantId: number) {
   return getAssignments().find((a) => a.registrantId === registrantId);
 }
 
-export function getMentorById(id: number): LocalMentor | undefined {
-  return getMentors().find((m) => m.id === id);
+export function getPemanduById(id: number): LocalPemandu | undefined {
+  return getPemandus().find((m) => m.id === id);
 }
+/** @deprecated Use getPemanduById */
+export const getMentorById = getPemanduById;
 
 export function getPointSummary(registrantId: number) {
   const acts = getActivitiesByRegistrant(registrantId);
@@ -298,6 +310,175 @@ export function getPointSummary(registrantId: number) {
     rejected: acts.filter((a) => a.status === "rejected").reduce((sum, a) => sum + a.points, 0),
     count: acts.length,
   };
+}
+
+// ─── Verified Members (for Pemandu/PSDM registration) ─────────────
+export interface VerifiedMember {
+  serialNumber: string; // Nomor Seri Anggota
+  fullName: string;
+  email: string;
+  role: "pemandu" | "psdm";
+}
+
+const PSDM_PIN = "UFOADMIN2024"; // Special PIN for PSDM registration
+
+export const VERIFIED_MEMBERS: VerifiedMember[] = [
+  { serialNumber: "UFO-2024-001", fullName: "Dr. Budi Santoso, M.Sn.", email: "budi.santoso@ugm.ac.id", role: "pemandu" },
+  { serialNumber: "UFO-2024-002", fullName: "Rina Amelia, M.Ds.", email: "rina.amelia@ugm.ac.id", role: "pemandu" },
+  { serialNumber: "UFO-ADMIN-001", fullName: "Admin PSDM", email: "psdm@ufo.ugm.ac.id", role: "psdm" },
+];
+
+export function verifyMember(serialNumber: string, role: "pemandu" | "psdm", pin?: string): VerifiedMember | null {
+  const members = getVerifiedMembers();
+  const member = members.find(
+    (m) => m.serialNumber === serialNumber && m.role === role
+  );
+  if (!member) return null;
+  if (role === "psdm" && pin !== PSDM_PIN) return null;
+  return member;
+}
+
+export function autoCreateRegistrant(userName: string, userEmail: string): LocalRegistrant {
+  // Check if registrant already exists
+  const existing = getRegistrants().find((r) => r.email.toLowerCase() === userEmail.toLowerCase());
+  if (existing) return existing;
+
+  const newReg: LocalRegistrant = {
+    id: genId(),
+    fullName: userName,
+    email: userEmail,
+    year: new Date().getFullYear().toString(),
+    major: "Belum diisi",
+    status: "active",
+    createdAt: new Date().toISOString(),
+  };
+  const all = getRegistrants();
+  setItem(KEYS.registrants, [...all, newReg]);
+  return newReg;
+}
+
+// ─── Pemandu CRUD ─────────────────────────────────────────────────
+export function addPemandu(data: Omit<LocalPemandu, "id" | "status">): LocalPemandu {
+  const all = getPemandus();
+  const item: LocalPemandu = { ...data, id: genId(), status: "active" };
+  setItem(KEYS.mentors, [...all, item]);
+  return item;
+}
+
+export function updatePemandu(id: number, updates: Partial<LocalPemandu>) {
+  const all = getPemandus();
+  const updated = all.map((m) => (m.id === id ? { ...m, ...updates } : m));
+  setItem(KEYS.mentors, updated);
+}
+
+export function deletePemandu(id: number) {
+  const all = getPemandus().filter((m) => m.id !== id);
+  setItem(KEYS.mentors, all);
+  // Also remove assignments for this pemandu
+  const assignments = getAssignments().filter((a) => a.pemanduId !== id);
+  setItem(KEYS.assignments, assignments);
+}
+
+// ─── Registrant CRUD ──────────────────────────────────────────────
+export function updateRegistrant(id: number, updates: Partial<LocalRegistrant>) {
+  const all = getRegistrants();
+  const updated = all.map((r) => (r.id === id ? { ...r, ...updates } : r));
+  setItem(KEYS.registrants, updated);
+}
+
+export function deleteRegistrant(id: number) {
+  const all = getRegistrants().filter((r) => r.id !== id);
+  setItem(KEYS.registrants, all);
+  // Also remove activities and assignments for this registrant
+  const activities = getActivities().filter((a) => a.registrantId !== id);
+  setItem(KEYS.activities, activities);
+  const assignments = getAssignments().filter((a) => a.registrantId !== id);
+  setItem(KEYS.assignments, assignments);
+}
+
+// ─── Verified Members CRUD (localStorage-backed) ──────────────────
+export function getVerifiedMembers(): VerifiedMember[] {
+  return getItem<VerifiedMember[]>(KEYS.verifiedMembers, VERIFIED_MEMBERS);
+}
+
+export function addVerifiedMember(data: VerifiedMember) {
+  const all = getVerifiedMembers();
+  // Prevent duplicates by serialNumber
+  if (all.some((m) => m.serialNumber === data.serialNumber)) {
+    throw new Error("Nomor Seri Anggota sudah terdaftar");
+  }
+  setItem(KEYS.verifiedMembers, [...all, data]);
+}
+
+export function updateVerifiedMember(serialNumber: string, updates: Partial<VerifiedMember>) {
+  const all = getVerifiedMembers();
+  const updated = all.map((m) => (m.serialNumber === serialNumber ? { ...m, ...updates } : m));
+  setItem(KEYS.verifiedMembers, updated);
+}
+
+export function deleteVerifiedMember(serialNumber: string) {
+  const all = getVerifiedMembers().filter((m) => m.serialNumber !== serialNumber);
+  setItem(KEYS.verifiedMembers, all);
+}
+
+// ─── Locations CRUD (localStorage-backed) ─────────────────────────
+const DEFAULT_LOCATIONS = [
+  "Sekretariat UFO UGM",
+  "Sekretariat Bersama N58 UGM",
+  "Auditorium FMIPA UGM",
+  "Grha Sabha Pramana UGM",
+  "Balairung UGM",
+  "Perpustakaan Pusat UGM",
+  "Museum UGM",
+  "Taman Budaya Yogyakarta",
+  "Jogja National Museum",
+  "Galeri Nasional Indonesia Yogyakarta",
+  "Taman Sari Yogyakarta",
+  "Candi Prambanan",
+  "Candi Borobudur",
+  "Malioboro",
+  "Taman Pelangi Jogja",
+  "Lapangan Pancasila UGM",
+  "Gelanggang Mahasiswa UGM",
+  "Fakultas Ilmu Budaya UGM",
+  "Fakultas Teknik UGM",
+  "Fakultas Ekonomi dan Bisnis UGM",
+  "Fakultas Filsafat UGM",
+  "Fakultas Hukum UGM",
+  "Fakultas Psikologi UGM",
+  "Fakultas Farmasi UGM",
+  "Fakultas Kedokteran Hewan UGM",
+  "Fakultas Kehutanan UGM",
+  "Fakultas Pertanian UGM",
+  "Fakultas Peternakan UGM",
+  "Fakultas MIPA UGM",
+  "Fakultas Seni Rupa dan Desain ISI Yogyakarta",
+  "Pendopo Agung UGM",
+  "Ruang Multimedia UGM",
+  "Auditorium Fakultas Teknik UGM",
+  "Alun-Alun Selatan Yogyakarta",
+  "Kampung Wisata Taman Sari",
+  "Kotagede",
+  "Benteng Vredeburg",
+  "Keraton Yogyakarta",
+  "Stasiun Tugu Yogyakarta",
+  "Stasiun Lempuyangan",
+  "Bandara Adisutjipto",
+];
+
+export function getLocations(): string[] {
+  return getItem<string[]>(KEYS.locations, DEFAULT_LOCATIONS);
+}
+
+export function addLocation(name: string) {
+  const all = getLocations();
+  if (all.includes(name)) return;
+  setItem(KEYS.locations, [...all, name]);
+}
+
+export function deleteLocation(name: string) {
+  const all = getLocations().filter((l) => l !== name);
+  setItem(KEYS.locations, all);
 }
 
 // ─── React Hook ──────────────────────────────────────────────────
@@ -323,21 +504,43 @@ export function useLocalData() {
     refresh,
     // Expose all CRUD
     registrants: getRegistrants(),
-    mentors: getMentors(),
+    mentors: getPemandus(),
+    pemandus: getPemandus(),
     activities: getActivities(),
     assignments: getAssignments(),
     activityTypes: ACTIVITY_TYPES,
+    // Pemandu
+    addPemandu,
+    updatePemandu,
+    deletePemandu,
+    getCUFOByPemandu,
+    getMenteesByMentor: getCUFOByPemandu, // backward compat
+    getPemanduById,
+    getMentorById: getPemanduById, // backward compat
+    // Registrant
     addRegistrant,
-    addActivity,
-    updateActivity,
-    addAssignment,
-    removeAssignment,
-    getActivitiesByRegistrant,
-    getMenteesByMentor,
-    getMentorById,
+    updateRegistrant,
+    deleteRegistrant,
     getRegistrantByEmail,
     getRegistrantById,
+    autoCreateRegistrant,
+    // Activity
+    addActivity,
+    updateActivity,
+    getActivitiesByRegistrant,
     getPointSummary,
+    // Assignment
+    addAssignment,
+    removeAssignment,
     getAssignmentForRegistrant,
+    // Verified Members
+    verifiedMembers: getVerifiedMembers(),
+    addVerifiedMember,
+    updateVerifiedMember,
+    deleteVerifiedMember,
+    // Locations
+    locations: getLocations(),
+    addLocation,
+    deleteLocation,
   };
 }

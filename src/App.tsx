@@ -4,7 +4,7 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import Leaderboard from "./pages/Leaderboard";
 import MemberDashboard from "./pages/dashboard/Dashboard";
-import MentorDashboard from "./pages/mentor/MentorDashboard";
+import PemanduDashboard from "./pages/pemandu/PemanduDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 
@@ -21,9 +21,9 @@ export default function App() {
         <Route path="/dashboard" element={<MemberDashboard />} />
       </Route>
 
-      {/* Mentor Routes */}
-      <Route element={<ProtectedRoute allowedRoles={["mentor", "psdm"]} />}>
-        <Route path="/mentor" element={<MentorDashboard />} />
+      {/* Pemandu Routes */}
+      <Route element={<ProtectedRoute allowedRoles={["pemandu", "psdm"]} />}>
+        <Route path="/pemandu" element={<PemanduDashboard />} />
       </Route>
 
       {/* PSDM/Admin Routes */}

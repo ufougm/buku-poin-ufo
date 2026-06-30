@@ -14,7 +14,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"user" | "mentor" | "psdm">("user");
+  const [role, setRole] = useState<"user" | "pemandu" | "psdm">("user");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,7 +48,7 @@ export default function Login() {
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-2">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <img src="/logo-ufo.png" alt="UFO UGM" className="h-10 w-auto" />
+              <img src="/logo-ufo-square.png" alt="UFO UGM" className="h-10 w-auto" />
             </div>
             <CardTitle className="text-xl">
               {mode === "login" ? "Masuk" : "Daftar Akun"}
@@ -137,7 +137,7 @@ export default function Login() {
                     className="w-full h-10 px-3 border border-gray-200 rounded-md text-sm"
                   >
                     <option value="user">Calon Anggota</option>
-                    <option value="mentor">Mentor</option>
+                    <option value="pemandu">Pemandu</option>
                     <option value="psdm">PSDM (Admin)</option>
                   </select>
                 </div>

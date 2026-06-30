@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 export default function Navbar() {
-  const { user, isAuthenticated, isPsdm, isMentor, isUser, signOut } = useSupabaseAuth();
+  const { user, isAuthenticated, isPsdm, isPemandu, isUser, signOut } = useSupabaseAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -40,7 +40,7 @@ export default function Navbar() {
     ...(isAuthenticated
       ? [
           ...(isUser ? [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] : []),
-          ...(isMentor ? [{ to: "/mentor", label: "Dashboard Mentor", icon: Users }] : []),
+          ...(isPemandu ? [{ to: "/pemandu", label: "Dashboard Pemandu", icon: Users }] : []),
           ...(isPsdm ? [{ to: "/admin", label: "Panel PSDM", icon: Shield }] : []),
         ]
       : []),
@@ -96,7 +96,7 @@ export default function Navbar() {
                   <User className="h-4 w-4 text-gray-500" />
                   <span className="text-sm text-gray-700 font-medium">{user?.full_name || "User"}</span>
                   {isPsdm && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">PSDM</span>}
-                  {isMentor && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Mentor</span>}
+                  {isPemandu && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
                 </div>
                 <Button variant="ghost" size="sm" onClick={signOut} className="text-gray-500 hover:text-red-600">
                   <LogOut className="h-4 w-4" />
@@ -128,7 +128,7 @@ export default function Navbar() {
                       <p className="text-xs text-gray-500">{user?.email}</p>
                       <div className="mt-2">
                         {isPsdm && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Admin PSDM</span>}
-                        {isMentor && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Mentor</span>}
+                        {isPemandu && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
                         {isUser && <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">Calon Anggota</span>}
                       </div>
                     </div>

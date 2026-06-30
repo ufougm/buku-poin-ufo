@@ -37,14 +37,14 @@ import {
 export default function AdminDashboard() {
   const local = useLocalData();
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedMentor, setSelectedMentor] = useState("");
+  const [selectedPemandu, setSelectedPemandu] = useState("");
   const [selectedRegistrant, setSelectedRegistrant] = useState("");
   const [refreshTick, setRefreshTick] = useState(0);
 
   // Get data from localStorage
   const data = useMemo(() => {
     const registrants = local.registrants;
-    const mentors = local.mentors;
+    const pemandus = local.pemandus;
     const activities = local.activities;
     const assignments = local.assignments;
 
@@ -54,14 +54,14 @@ export default function AdminDashboard() {
 
     // Stats
     const stats = {
-      users: registrants.length + mentors.length,
-      mentors: mentors.length,
+      users: registrants.length + pemandus.length,
+      pemandus: pemandus.length,
       registrants: registrants.length,
       activities: activities.length,
       pendingActivities: activities.filter((a) => a.status === "pending").length,
       verifiedActivities: activities.filter((a) => a.status === "verified").length,
       totalPoints: activities.filter((a) => a.status === "verified").reduce((sum, a) => sum + a.points, 0),
-      mentorAssignments: assignments.length,
+      pemanduAssignments: assignments.length,
     };
 
     // Recent activities with names
@@ -97,27 +97,27 @@ export default function AdminDashboard() {
       .filter((d) => d.count > 0)
       .sort((a, b) => b.totalPoints - a.totalPoints);
 
-    // Mentor stats
-    const mentorStats = mentors.map((m) => {
-      const menteeCount = assignments.filter((a) => a.mentorId === m.id).length;
-      return { mentorId: m.id, mentorName: m.fullName, menteeCount, maxMentees: m.maxMentees };
+    // Pemandu stats
+    const pemanduStats = pemandus.map((m) => {
+      const menteeCount = assignments.filter((a) => a.pemanduId === m.id).length;
+      return { pemanduId: m.id, pemanduName: m.fullName, menteeCount, maxMentees: m.maxMentees };
     });
 
     // All assignments with names
     const allAssignments = assignments.map((a) => {
-      const mentor = mentors.find((m) => m.id === a.mentorId);
+      const pemandu = pemandus.find((m) => m.id === a.pemanduId);
       const reg = registrants.find((r) => r.id === a.registrantId);
-      return { assignmentId: a.id, mentorId: a.mentorId, mentorName: mentor?.fullName || "-", mentorEmail: mentor?.email || "-", registrantId: a.registrantId, registrantName: reg?.fullName || "-", registrantEmail: reg?.email || "-", registrantYear: reg?.year || "-", registrantMajor: reg?.major || "-" };
+      return { assignmentId: a.id, pemanduId: a.pemanduId, pemanduName: pemandu?.fullName || "-", pemanduEmail: pemandu?.email || "-", registrantId: a.registrantId, registrantName: reg?.fullName || "-", registrantEmail: reg?.email || "-", registrantYear: reg?.year || "-", registrantMajor: reg?.major || "-" };
     });
 
-    return { stats, recentActivities, topRegistrants, activityDistribution, mentorStats, allAssignments, unassigned, registrants, mentors };
+    return { stats, recentActivities, topRegistrants, activityDistribution, pemanduStats, allAssignments, unassigned, registrants, pemandus };
   }, [refreshTick]);
 
   const handleAssign = () => {
-    if (!selectedMentor || !selectedRegistrant) return;
-    local.addAssignment(Number(selectedMentor), Number(selectedRegistrant));
+    if (!selectedPemandu || !selectedRegistrant) return;
+    local.addAssignment(Number(selectedPemandu), Number(selectedRegistrant));
     setRefreshTick((t) => t + 1);
-    setSelectedMentor("");
+    setSelectedPemandu("");
     setSelectedRegistrant("");
   };
 
@@ -144,14 +144,14 @@ export default function AdminDashboard() {
             <Shield className="h-6 w-6 text-red-600" />
             <h1 className="text-2xl font-bold text-gray-900">Panel PSDM (Admin)</h1>
           </div>
-          <p className="text-sm text-gray-500">Monitoring sistem dan manajemen mentor - calon anggota</p>
+          <p className="text-sm text-gray-500">Monitoring sistem dan manajemen pemandu - calon anggota</p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
             { label: "Calon Anggota", value: data.stats.registrants, color: "text-purple-600", icon: Users },
-            { label: "Mentor", value: data.stats.mentors, color: "text-green-600", icon: Users },
+            { label: "Pemandu", value: data.stats.pemandus, color: "text-green-600", icon: Users },
             { label: "Total Kegiatan", value: data.stats.activities, color: "text-red-600", icon: Activity },
             { label: "Total Poin", value: data.stats.totalPoints, color: "text-yellow-600", icon: Trophy },
           ].map((s) => (
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="flex flex-wrap h-auto">
             <TabsTrigger value="overview"><BarChart3 className="h-4 w-4 mr-2" />Overview</TabsTrigger>
-            <TabsTrigger value="mentor-mapping"><LinkIcon className="h-4 w-4 mr-2" />Pemetaan Mentor</TabsTrigger>
+            <TabsTrigger value="pemandu-mapping"><LinkIcon className="h-4 w-4 mr-2" />Pemetaan Pemandu</TabsTrigger>
             <TabsTrigger value="activities"><Activity className="h-4 w-4 mr-2" />Kegiatan</TabsTrigger>
           </TabsList>
 
@@ -245,26 +245,26 @@ export default function AdminDashboard() {
             </Card>
           </TabsContent>
 
-          {/* Mentor Mapping */}
-          <TabsContent value="mentor-mapping" className="space-y-6">
+          {/* Pemandu Mapping */}
+          <TabsContent value="pemandu-mapping" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Tugaskan Mentor ke Calon Anggota</CardTitle>
-                <CardDescription>Pilih mentor dan calon anggota untuk membuat pemetaan baru</CardDescription>
+                <CardTitle>Tugaskan Pemandu ke Calon Anggota</CardTitle>
+                <CardDescription>Pilih pemandu dan calon anggota untuk membuat pemetaan baru</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Mentor</label>
-                    <Select value={selectedMentor} onValueChange={setSelectedMentor}>
-                      <SelectTrigger><SelectValue placeholder="Pilih mentor" /></SelectTrigger>
+                    <label className="text-sm font-medium mb-2 block">Pemandu</label>
+                    <Select value={selectedPemandu} onValueChange={setSelectedPemandu}>
+                      <SelectTrigger><SelectValue placeholder="Pilih pemandu" /></SelectTrigger>
                       <SelectContent>
-                        {data.mentors.map((m) => <SelectItem key={m.id} value={m.id.toString()}>{m.fullName}</SelectItem>)}
+                        {data.pemandus.map((m) => <SelectItem key={m.id} value={m.id.toString()}>{m.fullName}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Calon Anggota (Belum Punya Mentor)</label>
+                    <label className="text-sm font-medium mb-2 block">Calon Anggota (Belum Punya Pemandu)</label>
                     <Select value={selectedRegistrant} onValueChange={setSelectedRegistrant}>
                       <SelectTrigger><SelectValue placeholder="Pilih calon anggota" /></SelectTrigger>
                       <SelectContent>
@@ -272,16 +272,16 @@ export default function AdminDashboard() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleAssign} disabled={!selectedMentor || !selectedRegistrant} className="bg-red-600 hover:bg-red-700"><LinkIcon className="h-4 w-4 mr-2" />Tugaskan</Button>
+                  <Button onClick={handleAssign} disabled={!selectedPemandu || !selectedRegistrant} className="bg-red-600 hover:bg-red-700"><LinkIcon className="h-4 w-4 mr-2" />Tugaskan</Button>
                 </div>
 
-                {data.mentorStats.length > 0 && (
+                {data.pemanduStats.length > 0 && (
                   <div className="mt-6">
-                    <h4 className="text-sm font-medium mb-3">Kapasitas Mentor</h4>
+                    <h4 className="text-sm font-medium mb-3">Kapasitas Pemandu</h4>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {data.mentorStats.map((ms) => (
-                        <div key={ms.mentorId} className={`p-3 rounded-lg border ${ms.menteeCount >= ms.maxMentees ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
-                          <p className="text-sm font-medium truncate">{ms.mentorName}</p>
+                      {data.pemanduStats.map((ms) => (
+                        <div key={ms.pemanduId} className={`p-3 rounded-lg border ${ms.menteeCount >= ms.maxMentees ? "bg-red-50 border-red-200" : "bg-gray-50 border-gray-200"}`}>
+                          <p className="text-sm font-medium truncate">{ms.pemanduName}</p>
                           <p className="text-xs text-gray-500">{ms.menteeCount} / {ms.maxMentees} mentee</p>
                           <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1"><div className={`h-1.5 rounded-full ${ms.menteeCount >= ms.maxMentees ? "bg-red-500" : "bg-red-500"}`} style={{ width: `${Math.min((ms.menteeCount / ms.maxMentees) * 100, 100)}%` }} /></div>
                         </div>
@@ -295,19 +295,19 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Daftar Pemetaan Aktif</CardTitle>
-                <CardDescription>Semua pemetaan mentor - calon anggota</CardDescription>
+                <CardDescription>Semua pemetaan pemandu - calon anggota</CardDescription>
               </CardHeader>
               <CardContent>
                 {data.allAssignments.length > 0 ? (
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow><TableHead>Mentor</TableHead><TableHead>Calon Anggota</TableHead><TableHead>Angkatan</TableHead><TableHead>Jurusan</TableHead><TableHead>Aksi</TableHead></TableRow>
+                        <TableRow><TableHead>Pemandu</TableHead><TableHead>Calon Anggota</TableHead><TableHead>Angkatan</TableHead><TableHead>Jurusan</TableHead><TableHead>Aksi</TableHead></TableRow>
                       </TableHeader>
                       <TableBody>
                         {data.allAssignments.map((a) => (
                           <TableRow key={a.assignmentId}>
-                            <TableCell className="font-medium">{a.mentorName}</TableCell>
+                            <TableCell className="font-medium">{a.pemanduName}</TableCell>
                             <TableCell>{a.registrantName}</TableCell>
                             <TableCell>{a.registrantYear}</TableCell>
                             <TableCell>{a.registrantMajor}</TableCell>

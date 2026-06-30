@@ -27,8 +27,8 @@ export default function Hero() {
         </div>
 
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-          Sistem Informasi
-          <span className="block text-red-400">Buku Poin UKM</span>
+          UFO UGM
+          <span className="block text-red-400">Integrated Point System</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">

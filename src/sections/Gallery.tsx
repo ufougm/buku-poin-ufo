@@ -3,27 +3,27 @@ import { Camera } from "lucide-react";
 export default function Gallery() {
   const galleryItems = [
     {
-      src: "/assets/gallery/pameran-pra-pelantikan.jpg",
+      src: "/gallery/pameran-pra-pelantikan.jpg",
       title: "Pameran Pra-Pelantikan CUFO XXXIII",
       category: "Pameran",
     },
     {
-      src: "/assets/gallery/event-hunting.jpg",
+      src: "/gallery/event-hunting.jpg",
       title: "Event Hunting",
       category: "Hunting",
     },
     {
-      src: "/assets/gallery/pelantikan-anggota.jpg",
+      src: "/gallery/pelantikan-anggota.jpg",
       title: "Pelantikan Anggota UFO",
       category: "Pelantikan",
     },
     {
-      src: "/assets/gallery/diklat-proses-kreatif.jpg",
+      src: "/gallery/diklat-proses-kreatif.jpg",
       title: "Diklat Proses Kreatif",
       category: "Diklat",
     },
     {
-      src: "/assets/gallery/ufolunteer.jpg",
+      src: "/gallery/ufolunteer.jpg",
       title: "UFOlunteer x Desa Mitra BEM FEB UGM",
       subtitle: "Pengabdian Masyarakat",
       category: "Pengabdian",

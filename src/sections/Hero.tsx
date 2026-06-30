@@ -22,7 +22,7 @@ export default function Hero() {
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-400/20 rounded-full mb-6">
-          <img src="/assets/logo-ufo.png" alt="UFO" className="h-5 w-auto" />
+          <img src="/logo-ufo.png" alt="UFO" className="h-5 w-auto" />
           <span className="text-sm text-red-300">Unit Kegiatan Mahasiswa Fotografi UGM</span>
         </div>
 

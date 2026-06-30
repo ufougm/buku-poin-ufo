@@ -59,7 +59,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/assets/logo-ufo.png" alt="UFO UGM" className="h-8 w-auto" />
+            <img src="/logo-ufo.png" alt="UFO UGM" className="h-8 w-auto" />
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
@@ -119,7 +119,7 @@ export default function Navbar() {
               <SheetTitle className="sr-only">Menu</SheetTitle>
               <div className="flex flex-col h-full">
                 <div className="p-4 border-b">
-                  <img src="/assets/logo-ufo.png" alt="UFO UGM" className="h-7 w-auto" />
+                  <img src="/logo-ufo.png" alt="UFO UGM" className="h-7 w-auto" />
                 </div>
                 <div className="flex-1 p-4 space-y-1">
                   {isAuthenticated && (

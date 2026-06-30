@@ -7,7 +7,7 @@ export default function NotFound() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="text-center max-w-md">
         <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <img src="/assets/logo-ufo.png" alt="UFO UGM" className="h-12 w-auto" />
+          <img src="/logo-ufo.png" alt="UFO UGM" className="h-12 w-auto" />
         </div>
         <h1 className="text-6xl font-bold text-gray-900 mb-2">404</h1>
         <h2 className="text-xl font-semibold text-gray-700 mb-3">

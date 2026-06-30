@@ -43,7 +43,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src="/assets/logo-ufo.png" alt="UFO UGM" className="h-10 w-auto" />
+              <img src="/logo-ufo.png" alt="UFO UGM" className="h-10 w-auto" />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
               Unit Fotografi UGM (UFO) — ruang aman dan inklusif bagi siapa saja 

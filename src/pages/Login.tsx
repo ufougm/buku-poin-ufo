@@ -193,14 +193,14 @@ export default function Login() {
       <div className="w-full max-w-sm">
         {/* Upper logo - horizontal, bigger */}
         <div className="flex items-center justify-center mb-6">
-          <img src="/assets/logo-ufo.png" alt="UFO UGM" className="h-16 w-auto max-w-[280px] object-contain" />
+          <img src="/logo-ufo.png" alt="UFO UGM" className="h-16 w-auto max-w-[280px] object-contain" />
         </div>
 
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-2">
             {/* Lower logo - sunburst with solid black circle background, bigger */}
             <div className="mx-auto mb-4 w-24 h-24 rounded-full bg-black flex items-center justify-center shadow-lg">
-              <img src="/assets/logo-ufo-square.png" alt="UFO UGM" className="w-20 h-20 object-contain" />
+              <img src="/logo-ufo-square.png" alt="UFO UGM" className="w-20 h-20 object-contain" />
             </div>
             <CardTitle className="text-xl">
               {mode === "login" ? "Masuk" : "Daftar Akun"}

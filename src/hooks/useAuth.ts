@@ -1,51 +1,71 @@
 import { useState, useEffect, useMemo } from "react";
 
-export interface MockUser {
-  id: number;
-  unionId: string;
+// ─── Session User Type ────────────────────────────────────────────
+export interface SessionUser {
+  id: string;
   name: string;
-  email: string;
-  role: "user" | "pemandu" | "psdm";
+  role: string;
+  angkatan?: number;
+  divisi?: string;
+  isPreRegistered: boolean;
 }
 
-function getMockUser(): MockUser | null {
+const SESSION_KEY = "ukm_session_user";
+
+function getSessionUser(): SessionUser | null {
   try {
-    const raw = localStorage.getItem("ukm_mock_user");
-    if (!raw) return null;
-    return JSON.parse(raw) as MockUser;
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-export function useAuth() {
-  const [user, setUser] = useState<MockUser | null>(getMockUser);
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem("ukm_mock_user"); // legacy cleanup
+}
 
-  // Listen for storage changes (in case another tab logs in/out)
+// Effective role: psdm_pemandu → psdm for routing
+function getEffectiveRole(role: string): string {
+  if (role === "psdm_pemandu") return "psdm";
+  return role;
+}
+
+export function useAuth() {
+  const [user, setUser] = useState<SessionUser | null>(getSessionUser);
+
   useEffect(() => {
-    const handler = () => setUser(getMockUser());
+    const handler = () => setUser(getSessionUser());
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
   }, []);
 
-  const isPsdm = user?.role === "psdm";
-  const isMentor = user?.role === "pemandu";
-  const isUser = user?.role === "user";
+  const effectiveRole = user ? getEffectiveRole(user.role) : null;
+
+  const isAuthenticated = !!user;
+  const isPsdm = effectiveRole === "psdm";
+  const isMentor = user?.role === "pemandu" || user?.role === "psdm_pemandu";
+  const isUser = effectiveRole === "user";
+
+  const role = effectiveRole;
+
+  const logout = () => {
+    clearSession();
+    setUser(null);
+    window.location.href = "#/login";
+  };
 
   return useMemo(
     () => ({
       user,
-      isAuthenticated: !!user,
-      isLoading: false, // never loading - instant read from localStorage
+      isAuthenticated,
       isPsdm,
       isMentor,
       isUser,
-      role: user?.role || null,
-      logout: () => {
-        localStorage.removeItem("ukm_mock_user");
-        window.location.reload();
-      },
+      role,
+      logout,
     }),
-    [user, isPsdm, isMentor, isUser]
+    [user, isAuthenticated, isPsdm, isMentor, isUser, role]
   );
 }

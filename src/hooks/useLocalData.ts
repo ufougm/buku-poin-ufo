@@ -67,6 +67,18 @@ export interface LocalKelompokAssignment {
   assignedAt: string;
 }
 
+// ─── Member (Anggota) Model ──────────────────────────────────────
+export interface LocalMember {
+  nsa: string;          // Nomor Seri Anggota = username
+  name: string;
+  angkatan: number;
+  divisi: string;
+  role: "psdm" | "pemandu" | "psdm_pemandu" | "user";
+  password: string;
+  email?: string;       // optional, for free signup
+  isPreRegistered: boolean;
+}
+
 // ─── Keys ─────────────────────────────────────────────────────────
 const KEYS = {
   registrants: "ukm_registrants",
@@ -78,6 +90,7 @@ const KEYS = {
   locations: "ukm_locations",
   kelompoks: "ukm_kelompoks",
   kelompokAssignments: "ukm_kelompok_assignments",
+  members: "ukm_members",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────
@@ -513,6 +526,106 @@ export function removeRegistrantFromKelompok(registrantId: number) {
   setItem(KEYS.assignments, pa);
 }
 
+// ─── Member CRUD ─────────────────────────────────────────────────
+export function getMembers(): LocalMember[] {
+  return getItem<LocalMember[]>(KEYS.members, []);
+}
+
+export function getMemberByNSA(nsa: string): LocalMember | undefined {
+  return getMembers().find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
+}
+
+export function addMember(data: Omit<LocalMember, "isPreRegistered">): LocalMember {
+  const all = getMembers();
+  if (all.some((m) => m.nsa.toLowerCase() === data.nsa.toLowerCase())) {
+    throw new Error("NSA sudah terdaftar");
+  }
+  const member: LocalMember = { ...data, isPreRegistered: true };
+  setItem(KEYS.members, [...all, member]);
+  return member;
+}
+
+export function updateMember(nsa: string, updates: Partial<LocalMember>) {
+  const all = getMembers();
+  const updated = all.map((m) => (m.nsa === nsa ? { ...m, ...updates } : m));
+  setItem(KEYS.members, updated);
+}
+
+export function deleteMember(nsa: string) {
+  const all = getMembers().filter((m) => m.nsa !== nsa);
+  setItem(KEYS.members, all);
+}
+
+// Determine role based on angkatan and divisi rules
+export function determineRole(angkatan: number, divisi: string): LocalMember["role"] | null {
+  const d = divisi.trim().toLowerCase();
+  // Rule 1: Angkatan 32 + PSDM/Ketua/Wakil Ketua → PSDM
+  if (angkatan === 32 && (d === "psdm" || d === "ketua" || d === "wakil ketua")) {
+    return "psdm";
+  }
+  // Rule 2: Angkatan 33 + PSDM → PSDM + Pemandu
+  if (angkatan === 33 && d === "psdm") {
+    return "psdm_pemandu";
+  }
+  // Rule 3: Angkatan 33 + Non-PSDM → Pemandu
+  if (angkatan === 33 && d !== "psdm") {
+    return "pemandu";
+  }
+  // Rule 4: Others → Not registered
+  return null;
+}
+
+// Pre-registered members from Excel database
+export const PRE_REGISTERED_MEMBERS: Omit<LocalMember, "isPreRegistered">[] = [
+  // Angkatan 32 - PSDM / Ketua / Wakil Ketua → PSDM
+  { nsa: "NSA.3224.018.1089", name: "MUHAMMAD NAUFAL HAFIZH", angkatan: 32, divisi: "Wakil Ketua", role: "psdm", password: "1089" },
+  { nsa: "NSA.3224.027.1098", name: "NAUFAL REZA AL LUTHFI", angkatan: 32, divisi: "Ketua", role: "psdm", password: "1098" },
+  { nsa: "NSA.3224.004.1075", name: "AWINDYA AYUNINGTYAS RAMADHANI", angkatan: 32, divisi: "PSDM", role: "psdm", password: "1075" },
+  { nsa: "NSA.3224.020.1091", name: "NABILA PUTRI SALSABILA", angkatan: 32, divisi: "PSDM", role: "psdm", password: "1091" },
+  { nsa: "NSA.3224.024.1095", name: "NAUFAL ARIF ARDHIANSYAH", angkatan: 32, divisi: "PSDM", role: "psdm", password: "1095" },
+  { nsa: "NSA.3224.036.1107", name: "TIARDEV YAN SATRITAMA", angkatan: 32, divisi: "PSDM", role: "psdm", password: "1107" },
+  // Angkatan 33 - PSDM → PSDM + Pemandu
+  { nsa: "NSA.3325.005.1114", name: "ELIZABETH LOVELY ANTONIO", angkatan: 33, divisi: "PSDM", role: "psdm_pemandu", password: "1114" },
+  { nsa: "NSA.3325.013.1122", name: "KEISANADA ALYUNA", angkatan: 33, divisi: "PSDM", role: "psdm_pemandu", password: "1122" },
+  { nsa: "NSA.3325.023.1132", name: "PERMATA YAQUB AURA WIJAYA", angkatan: 33, divisi: "PSDM", role: "psdm_pemandu", password: "1132" },
+  { nsa: "NSA.3325.031.1140", name: "YOHANES IMANNUEL ROSANTIANT", angkatan: 33, divisi: "PSDM", role: "psdm_pemandu", password: "1140" },
+  // Angkatan 33 - Non-PSDM → Pemandu
+  { nsa: "NSA.3325.001.1110", name: "AISHA", angkatan: 33, divisi: "Hunting", role: "pemandu", password: "1110" },
+  { nsa: "NSA.3325.002.1111", name: "AKHMARINA SIAMITA FADILAH", angkatan: 33, divisi: "Pameran", role: "pemandu", password: "1111" },
+  { nsa: "NSA.3325.003.1112", name: "ALHIMNI RUSYADI PUTRI ARSINDU", angkatan: 33, divisi: "MAK", role: "pemandu", password: "1112" },
+  { nsa: "NSA.3325.004.1113", name: "ANGELINE CALLISTA", angkatan: 33, divisi: "Pameran", role: "pemandu", password: "1113" },
+  { nsa: "NSA.3325.006.1115", name: "EZRA AGUNG MAWASTYA", angkatan: 33, divisi: "Diklat", role: "pemandu", password: "1115" },
+  { nsa: "NSA.3325.007.1116", name: "FARRAS AL FAYYADH", angkatan: 33, divisi: "Pameran", role: "pemandu", password: "1116" },
+  { nsa: "NSA.3325.008.1117", name: "FIKRI ATHAYA DIANDRA", angkatan: 33, divisi: "Medinfo", role: "pemandu", password: "1117" },
+  { nsa: "NSA.3325.009.1118", name: "GADANG ALAM SI RADJA", angkatan: 33, divisi: "Hunting", role: "pemandu", password: "1118" },
+  { nsa: "NSA.3325.011.1120", name: "HILMI RASYID", angkatan: 33, divisi: "MAK", role: "pemandu", password: "1120" },
+  { nsa: "NSA.3325.012.1121", name: "IQBAL ARUNG SAMUDRA", angkatan: 33, divisi: "Diklat", role: "pemandu", password: "1121" },
+  { nsa: "NSA.3325.014.1123", name: "KEVIN NUSYWA PUTRA", angkatan: 33, divisi: "Medinfo", role: "pemandu", password: "1123" },
+  { nsa: "NSA.3325.015.1124", name: "LUKMAN HAKIM", angkatan: 33, divisi: "Hunting", role: "pemandu", password: "1124" },
+  { nsa: "NSA.3325.016.1125", name: "MAWLA HUMAYUN AHSAN HERMAWAN", angkatan: 33, divisi: "Diklat", role: "pemandu", password: "1125" },
+  { nsa: "NSA.3325.017.1126", name: "MUHAMMAD NAUFAL LAUDZAKI", angkatan: 33, divisi: "MAK", role: "pemandu", password: "1126" },
+  { nsa: "NSA.3325.018.1127", name: "MUHAMMAD RAFIF AKIO SARWADI", angkatan: 33, divisi: "Medinfo", role: "pemandu", password: "1127" },
+  { nsa: "NSA.3325.019.1128", name: "MUHAMMAD RIFKY RADHIYAN PASHA", angkatan: 33, divisi: "MAK", role: "pemandu", password: "1128" },
+  { nsa: "NSA.3325.020.1129", name: "MUHAMMAD TAJU ABRAR RIZA", angkatan: 33, divisi: "Hunting", role: "pemandu", password: "1129" },
+  { nsa: "NSA.3325.021.1130", name: "NAFISA RAMADANI", angkatan: 33, divisi: "Diklat", role: "pemandu", password: "1130" },
+  { nsa: "NSA.3325.022.1131", name: "NAILAH ATTARAFSHAH SURYANTO", angkatan: 33, divisi: "Humas", role: "pemandu", password: "1131" },
+  { nsa: "NSA.3325.024.1133", name: "RAHMI NISRINA", angkatan: 33, divisi: "Humas", role: "pemandu", password: "1133" },
+  { nsa: "NSA.3325.025.1134", name: "REFANIA AZHARI SIREGAR", angkatan: 33, divisi: "Pameran", role: "pemandu", password: "1134" },
+  { nsa: "NSA.3325.027.1136", name: "SANDY DIYO ANGGARA", angkatan: 33, divisi: "Sekretaris", role: "pemandu", password: "1136" },
+  { nsa: "NSA.3325.028.1137", name: "SHAUMI NOORRAMADHANI", angkatan: 33, divisi: "Medinfo", role: "pemandu", password: "1137" },
+  { nsa: "NSA.3325.029.1138", name: "SITI YASMIN FAJRI RAMADHANI", angkatan: 33, divisi: "Humas", role: "pemandu", password: "1138" },
+  { nsa: "NSA.3325.030.1139", name: "SYAKIRA NAILA JAGADDHITA", angkatan: 33, divisi: "Humas", role: "pemandu", password: "1139" },
+  { nsa: "NSA.3325.032.1141", name: "YUSUF KURNIAWAN", angkatan: 33, divisi: "Bendahara", role: "pemandu", password: "1141" },
+];
+
+// Seed pre-registered members into localStorage
+export function seedMembers() {
+  const existing = getMembers();
+  if (existing.length > 0) return; // Already seeded
+  const members: LocalMember[] = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
+  setItem(KEYS.members, members);
+}
+
 // ─── Registrant CRUD ──────────────────────────────────────────────
 export function updateRegistrant(id: number, updates: Partial<LocalRegistrant>) {
   const all = getRegistrants();
@@ -676,6 +789,14 @@ export function useLocalData() {
     locations: getLocations(),
     addLocation,
     deleteLocation,
+    // Members
+    members: getMembers(),
+    getMemberByNSA,
+    addMember,
+    updateMember,
+    deleteMember,
+    seedMembers,
+    determineRole,
     // Kelompok
     kelompoks: getKelompoks(),
     kelompokAssignments: getKelompokAssignments(),

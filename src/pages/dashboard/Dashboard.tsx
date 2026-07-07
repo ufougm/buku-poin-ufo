@@ -109,19 +109,26 @@ export default function MemberDashboard() {
   const [regFaculty, setRegFaculty] = useState("");
   const [regPhone, setRegPhone] = useState("");
 
-  // Find registrant
+  // Find or auto-create registrant
   useEffect(() => {
-    if (user?.email || user?.name) {
-      let found = user?.email ? local.getRegistrantByEmail(user.email) : undefined;
-      if (!found && user?.name) {
-        found = local.registrants.find((r) =>
-          r.fullName.toLowerCase().includes(user.name!.toLowerCase()) ||
-          user.name!.toLowerCase().includes(r.fullName.toLowerCase())
-        );
+    if (user?.name) {
+      // Try find by name match
+      let found = local.registrants.find((r) =>
+        r.fullName.toLowerCase().includes(user.name!.toLowerCase()) ||
+        user.name!.toLowerCase().includes(r.fullName.toLowerCase())
+      );
+      // Auto-create if not found (new Calon Anggota from free signup)
+      if (!found) {
+        found = local.addRegistrant({
+          fullName: user.name,
+          email: (user as any)?.email || `${user.id}@placeholder.com`,
+          year: new Date().getFullYear().toString(),
+          major: "Belum diisi",
+        });
       }
       if (found) setMyRegistrant(found);
     }
-  }, [user?.email, user?.name, refreshTick]);
+  }, [user?.name, user?.id, refreshTick]);
 
   const activities = useMemo(
     () => (myRegistrant ? local.getActivitiesByRegistrant(myRegistrant.id) : []),
@@ -174,10 +181,10 @@ export default function MemberDashboard() {
   };
 
   const handleRegister = () => {
-    if (!user?.name || !user?.email || !regYear || !regMajor) return;
+    if (!user?.name || !regYear || !regMajor) return;
     const newReg = local.addRegistrant({
       fullName: user.name,
-      email: user.email,
+      email: (user as any)?.email || `${user.id}@placeholder.com`,
       year: regYear,
       major: regMajor,
       faculty: regFaculty || undefined,

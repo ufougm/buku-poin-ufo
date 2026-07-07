@@ -6,67 +6,57 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogIn, UserPlus, ArrowLeft, Loader2, ShieldCheck, Users, User } from "lucide-react";
 import { Link } from "react-router";
-import { verifyMember, autoCreateRegistrant, addPemandu, getPemandus, updatePemandu } from "@/hooks/useLocalData";
+import { getMembers, seedMembers, getMemberByNSA } from "@/hooks/useLocalData";
 
 // ─── Stored Users Management ──────────────────────────────────────
-interface StoredUser {
-  id: number;
+// Users who signed up freely (not pre-registered via NSA)
+const FREE_USERS_KEY = "ukm_free_users";
+
+interface FreeUser {
+  username: string;
   name: string;
-  email: string;
-  password: string; // plain text for demo
-  role: "user" | "pemandu" | "psdm";
-  serialNumber?: string;
-  pemanduId?: number;
+  email?: string;
+  password: string;
+  role: "user";
+  createdAt: string;
 }
 
-const USERS_KEY = "ukm_registered_users";
-
-function getStoredUsers(): StoredUser[] {
+function getFreeUsers(): FreeUser[] {
   try {
-    const raw = localStorage.getItem(USERS_KEY);
+    const raw = localStorage.getItem(FREE_USERS_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
 }
 
-function saveUser(user: StoredUser) {
-  const users = getStoredUsers();
-  const existing = users.findIndex((u) => u.email.toLowerCase() === user.email.toLowerCase());
-  if (existing >= 0) {
-    users[existing] = user;
-  } else {
-    users.push(user);
-  }
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+function saveFreeUser(user: FreeUser) {
+  const users = getFreeUsers();
+  users.push(user);
+  localStorage.setItem(FREE_USERS_KEY, JSON.stringify(users));
 }
 
-function findUserByEmail(email: string): StoredUser | undefined {
-  return getStoredUsers().find((u) => u.email.toLowerCase() === email.toLowerCase());
+function findFreeUserByUsername(username: string): FreeUser | undefined {
+  return getFreeUsers().find((u) => u.username.toLowerCase() === username.toLowerCase());
 }
 
-// ─── Direct Login ─────────────────────────────────────────────────
-function directLogin(user: StoredUser) {
-  const sessionUser: any = {
-    id: user.id,
-    unionId: `user_${Date.now()}`,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    serialNumber: user.serialNumber,
-  };
-  if (user.pemanduId) sessionUser.pemanduId = user.pemanduId;
-  localStorage.setItem("ukm_mock_user", JSON.stringify(sessionUser));
+// ─── Session Management ───────────────────────────────────────────
+interface SessionUser {
+  id: string;       // NSA or username
+  name: string;
+  role: string;
+  angkatan?: number;
+  divisi?: string;
+  isPreRegistered: boolean;
+}
 
-  // Auto-create registrant for Calon Anggota
-  if (user.role === "user") {
-    autoCreateRegistrant(user.name, user.email);
-  }
-
-  // Redirect based on role
-  if (user.role === "psdm") {
+function setSession(user: SessionUser) {
+  localStorage.setItem("ukm_session_user", JSON.stringify(user));
+  // Redirect based on effective role
+  const effectiveRole = user.role === "psdm_pemandu" ? "psdm" : user.role;
+  if (effectiveRole === "psdm") {
     window.location.href = "#/admin";
-  } else if (user.role === "pemandu") {
+  } else if (effectiveRole === "pemandu") {
     window.location.href = "#/pemandu";
   } else {
     window.location.href = "#/dashboard";
@@ -74,131 +64,119 @@ function directLogin(user: StoredUser) {
 }
 
 export default function Login() {
+  // Seed pre-registered members on first load
+  seedMembers();
+
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"user" | "pemandu" | "psdm">("user");
-  const [serialNumber, setSerialNumber] = useState("");
-  const [adminPin, setAdminPin] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // ─── Login handler ──────────────────────────────────────────────
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!email.trim() || !password.trim()) {
-      setError("Email dan password wajib diisi");
+    if (!username.trim() || !password.trim()) {
+      setError("Username dan password wajib diisi");
       return;
     }
 
-    const user = findUserByEmail(email);
-    if (!user) {
-      setError("Email belum terdaftar. Silakan daftar terlebih dahulu.");
-      return;
-    }
-    if (user.password !== password) {
-      setError("Password salah.");
+    // Try 1: Pre-registered member by NSA
+    const member = getMemberByNSA(username.trim());
+    if (member) {
+      if (member.password !== password) {
+        setError("Password salah.");
+        return;
+      }
+      setLoading(true);
+      setSession({
+        id: member.nsa,
+        name: member.name,
+        role: member.role,
+        angkatan: member.angkatan,
+        divisi: member.divisi,
+        isPreRegistered: true,
+      });
       return;
     }
 
-    setLoading(true);
-    directLogin(user);
+    // Try 2: Free signup user by username
+    const freeUser = findFreeUserByUsername(username.trim());
+    if (freeUser) {
+      if (freeUser.password !== password) {
+        setError("Password salah.");
+        return;
+      }
+      setLoading(true);
+      setSession({
+        id: freeUser.username,
+        name: freeUser.name,
+        role: freeUser.role,
+        isPreRegistered: false,
+      });
+      return;
+    }
+
+    setError("Username tidak ditemukan. Silakan daftar terlebih dahulu.");
   };
 
+  // ─── Register handler ───────────────────────────────────────────
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // Basic validation
     if (!name.trim()) { setError("Nama lengkap wajib diisi"); return; }
-    if (!email.trim() || !password.trim()) {
-      setError("Email dan password wajib diisi");
-      return;
-    }
-    if (password.length < 6) {
-      setError("Password minimal 6 karakter");
+    if (!username.trim()) { setError("Username wajib diisi"); return; }
+    if (!password.trim()) { setError("Password wajib diisi"); return; }
+    if (password.length < 4) { setError("Password minimal 4 karakter"); return; }
+
+    // Check if username conflicts with existing NSA
+    if (getMemberByNSA(username.trim())) {
+      setError("Username sudah terdaftar sebagai Nomor Seri Anggota. Gunakan NSA Anda untuk masuk.");
       return;
     }
 
-    // Check if email already registered
-    if (findUserByEmail(email)) {
-      setError("Email sudah terdaftar. Silakan masuk.");
+    // Check if username already taken by free user
+    if (findFreeUserByUsername(username.trim())) {
+      setError("Username sudah digunakan. Silakan pilih username lain.");
       return;
-    }
-
-    // Role-specific validation
-    if (role === "pemandu" || role === "psdm") {
-      if (!serialNumber.trim()) {
-        setError("Nomor Seri Anggota wajib diisi untuk role ini");
-        return;
-      }
-      const verified = verifyMember(serialNumber.trim(), role, role === "psdm" ? adminPin : undefined);
-      if (!verified) {
-        if (role === "psdm") {
-          setError("Nomor Seri Anggota tidak valid atau PIN salah");
-        } else {
-          setError("Nomor Seri Anggota tidak terdaftar sebagai Pemandu");
-        }
-        return;
-      }
     }
 
     setLoading(true);
 
-    // Create pemandu record if registering as pemandu
-    let pemanduId: number | undefined;
-    if (role === "pemandu") {
-      const verified = verifyMember(serialNumber.trim(), "pemandu");
-      if (verified) {
-        const existing = getPemandus().find((p) => p.email.toLowerCase() === email.trim().toLowerCase());
-        if (!existing) {
-          const newPemandu = addPemandu({
-            userId: 0,
-            fullName: name.trim(),
-            email: email.trim(),
-            expertise: "",
-            maxMentees: 10,
-          });
-          pemanduId = newPemandu.id;
-        } else {
-          pemanduId = existing.id;
-        }
-      }
-    }
-
-    // Create new user
-    const newUser: StoredUser = {
-      id: Math.floor(Math.random() * 9000) + 1000,
+    const newUser: FreeUser = {
+      username: username.trim(),
       name: name.trim(),
-      email: email.trim(),
+      email: email.trim() || undefined,
       password,
-      role,
-      serialNumber: serialNumber.trim() || undefined,
-      pemanduId,
+      role: "user",
+      createdAt: new Date().toISOString(),
     };
+    saveFreeUser(newUser);
 
-    // Update pemandu userId if created
-    if (pemanduId) {
-      updatePemandu(pemanduId, { userId: newUser.id });
-    }
-
-    saveUser(newUser);
-    directLogin(newUser);
+    setSession({
+      id: newUser.username,
+      name: newUser.name,
+      role: "user",
+      isPreRegistered: false,
+    });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-red-50 p-4">
       <div className="w-full max-w-sm">
-        {/* Upper logo - horizontal, bigger */}
+        {/* Upper logo - horizontal */}
         <div className="flex items-center justify-center mb-6">
           <img src="/logo-ufo.png" alt="UFO UGM" className="h-16 w-auto max-w-[280px] object-contain" />
         </div>
 
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-2">
-            {/* Lower logo - sunburst with solid black circle background, bigger */}
+            {/* Lower logo - sunburst with solid black circle */}
             <div className="mx-auto mb-4 w-24 h-24 rounded-full bg-black flex items-center justify-center shadow-lg">
               <img src="/logo-ufo-square.png" alt="UFO UGM" className="w-20 h-20 object-contain" />
             </div>
@@ -223,17 +201,20 @@ export default function Login() {
                 <TabsTrigger value="register">Daftar</TabsTrigger>
               </TabsList>
 
+              {/* ─── LOGIN ─── */}
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4 mt-4">
                   <div>
-                    <Label>Email</Label>
+                    <Label>Username / NSA</Label>
                     <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="nama@mail.ugm.ac.id"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Masukkan NSA atau username"
                       required
                     />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Anggota terdaftar: masukkan NSA Anda
+                    </p>
                   </div>
                   <div>
                     <Label>Password</Label>
@@ -244,6 +225,9 @@ export default function Login() {
                       placeholder="••••••••"
                       required
                     />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Password default anggota: 4 digit terakhir NSA
+                    </p>
                   </div>
                   <Button
                     type="submit"
@@ -260,68 +244,9 @@ export default function Login() {
                 </form>
               </TabsContent>
 
+              {/* ─── REGISTER ─── */}
               <TabsContent value="register">
                 <form onSubmit={handleRegister} className="space-y-4 mt-4">
-                  {/* Role Selection */}
-                  <div>
-                    <Label>Daftar Sebagai</Label>
-                    <div className="grid grid-cols-3 gap-2 mt-1.5">
-                      <button
-                        type="button"
-                        onClick={() => { setRole("user"); setError(""); }}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${
-                          role === "user"
-                            ? "border-red-500 bg-red-50 text-red-700"
-                            : "border-gray-200 text-gray-600 hover:border-red-300"
-                        }`}
-                      >
-                        <User className="h-4 w-4" />
-                        <span>Calon Anggota</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setRole("pemandu"); setError(""); }}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${
-                          role === "pemandu"
-                            ? "border-red-500 bg-red-50 text-red-700"
-                            : "border-gray-200 text-gray-600 hover:border-red-300"
-                        }`}
-                      >
-                        <Users className="h-4 w-4" />
-                        <span>Pemandu</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setRole("psdm"); setError(""); }}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${
-                          role === "psdm"
-                            ? "border-red-500 bg-red-50 text-red-700"
-                            : "border-gray-200 text-gray-600 hover:border-red-300"
-                        }`}
-                      >
-                        <ShieldCheck className="h-4 w-4" />
-                        <span>PSDM</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Role-specific notice */}
-                  {role === "user" && (
-                    <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                      Calon Anggota dapat mendaftar secara mandiri.
-                    </p>
-                  )}
-                  {role === "pemandu" && (
-                    <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded">
-                      Pemandu wajib memasukkan Nomor Seri Anggota yang valid.
-                    </p>
-                  )}
-                  {role === "psdm" && (
-                    <p className="text-xs text-red-700 bg-red-50 p-2 rounded">
-                      PSDM wajib memasukkan Nomor Seri Anggota dan PIN khusus.
-                    </p>
-                  )}
-
                   <div>
                     <Label>Nama Lengkap *</Label>
                     <Input
@@ -332,59 +257,39 @@ export default function Login() {
                     />
                   </div>
                   <div>
-                    <Label>Email</Label>
+                    <Label>Username *</Label>
+                    <Input
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Buat username Anda"
+                      required
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Username bebas, tidak perlu NSA
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Email (opsional)</Label>
                     <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="nama@mail.ugm.ac.id"
-                      required
                     />
                   </div>
                   <div>
-                    <Label>Password</Label>
+                    <Label>Password *</Label>
                     <Input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min. 6 karakter"
+                      placeholder="Min. 4 karakter"
                       required
                     />
                   </div>
-
-                  {/* Pemandu/PSDM: Nomor Seri Anggota */}
-                  {(role === "pemandu" || role === "psdm") && (
-                    <div>
-                      <Label>Nomor Seri Anggota *</Label>
-                      <Input
-                        value={serialNumber}
-                        onChange={(e) => setSerialNumber(e.target.value)}
-                        placeholder="Contoh: UFO-2024-001"
-                        required
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Masukkan Nomor Seri Anggota UFO Anda
-                      </p>
-                    </div>
-                  )}
-
-                  {/* PSDM only: Special PIN */}
-                  {role === "psdm" && (
-                    <div>
-                      <Label>PIN Khusus PSDM *</Label>
-                      <Input
-                        type="password"
-                        value={adminPin}
-                        onChange={(e) => setAdminPin(e.target.value)}
-                        placeholder="PIN dari admin"
-                        required
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Hubungi admin untuk mendapatkan PIN
-                      </p>
-                    </div>
-                  )}
-
+                  <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded">
+                    Pendaftaran ini untuk Calon Anggota baru. Role akan otomatis menjadi "Calon Anggota".
+                  </p>
                   <Button
                     type="submit"
                     className="w-full bg-red-600 hover:bg-red-700 h-11"

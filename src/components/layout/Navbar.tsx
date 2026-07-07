@@ -95,8 +95,9 @@ export default function Navbar() {
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full">
                   <User className="h-4 w-4 text-gray-500" />
                   <span className="text-sm text-gray-700 font-medium">{user?.name || "User"}</span>
-                  {isPsdm && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">PSDM</span>}
-                  {isMentor && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
+                  {user?.role === "psdm_pemandu" && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">PSDM + Pemandu</span>}
+                  {user?.role === "psdm" && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">PSDM</span>}
+                  {user?.role === "pemandu" && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
                 </div>
                 <Button variant="ghost" size="sm" onClick={logout} className="text-gray-500 hover:text-red-600">
                   <LogOut className="h-4 w-4" />
@@ -125,10 +126,11 @@ export default function Navbar() {
                   {isAuthenticated && (
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                       <p className="font-medium text-sm">{user?.name || "User"}</p>
-                      <p className="text-xs text-gray-500">{user?.email}</p>
+                      <p className="text-xs text-gray-500">{user?.id || ""}</p>
                       <div className="mt-2">
-                        {isPsdm && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Admin PSDM</span>}
-                        {isMentor && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
+                        {user?.role === "psdm_pemandu" && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">PSDM + Pemandu</span>}
+                        {user?.role === "psdm" && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Admin PSDM</span>}
+                        {user?.role === "pemandu" && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
                         {isUser && <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">Calon Anggota</span>}
                       </div>
                     </div>

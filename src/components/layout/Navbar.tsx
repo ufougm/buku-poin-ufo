@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Trophy,
+  HelpCircle,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -39,7 +40,10 @@ export default function Navbar() {
       : []),
     ...(isAuthenticated
       ? [
-          ...(isUser ? [{ to: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] : []),
+          ...(isUser ? [
+            { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+            { to: "/faq-buku-poin", label: "FAQ Buku Poin", icon: HelpCircle },
+          ] : []),
           ...(isMentor ? [{ to: "/pemandu", label: "Dashboard Pemandu", icon: Users }] : []),
           ...(isPsdm ? [{ to: "/admin", label: "Panel PSDM", icon: Shield }] : []),
         ]

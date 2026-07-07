@@ -149,10 +149,10 @@ export default function MemberDashboard() {
     if (!files) return;
     setUploadError("");
 
-    // Limit total images to 4
-    const remainingSlots = 4 - uploadedImages.length;
+    // Limit total images to 1
+    const remainingSlots = 1 - uploadedImages.length;
     if (remainingSlots <= 0) {
-      setUploadError("Maksimum 4 foto per kegiatan.");
+      setUploadError("Maksimum 1 foto per kegiatan.");
       return;
     }
 
@@ -508,7 +508,7 @@ export default function MemberDashboard() {
                         <div className="flex flex-col items-center">
                           <Upload className="h-5 w-5 text-gray-400 mb-1" />
                           <span className="text-xs text-gray-500">Klik untuk upload foto</span>
-                          <span className="text-xs text-gray-400">(Max 4 foto, max 1MB each)</span>
+                          <span className="text-xs text-gray-400">(Max 1 foto, max 1MB)</span>
                         </div>
                         <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
                       </label>
@@ -528,7 +528,7 @@ export default function MemberDashboard() {
                         ))}
                       </div>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">{uploadedImages.length}/4 foto</p>
+                    <p className="text-xs text-gray-400 mt-1">{uploadedImages.length}/1 foto</p>
                   </div>
 
                   {selectedType && (

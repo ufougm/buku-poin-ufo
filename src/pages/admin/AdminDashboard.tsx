@@ -625,13 +625,13 @@ export default function AdminDashboard() {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow><TableHead>Nama</TableHead><TableHead>Email</TableHead><TableHead>Keahlian</TableHead><TableHead>Kapasitas</TableHead><TableHead>Aksi</TableHead></TableRow>
+                        <TableRow><TableHead>Nama</TableHead><TableHead>NSA</TableHead><TableHead>Keahlian</TableHead><TableHead>Kapasitas</TableHead><TableHead>Aksi</TableHead></TableRow>
                       </TableHeader>
                       <TableBody>
                         {data.pemandus.map((p) => (
                           <TableRow key={p.id}>
                             <TableCell className="font-medium">{p.fullName}</TableCell>
-                            <TableCell>{p.email}</TableCell>
+                            <TableCell className="font-mono text-xs">{(p as any).nsa || p.email}</TableCell>
                             <TableCell>{p.expertise || "-"}</TableCell>
                             <TableCell>{p.maxMentees} CUFO</TableCell>
                             <TableCell>

@@ -628,14 +628,17 @@ export function seedMembers() {
 
 // ─── Pemandu from Members ────────────────────────────────────────
 // Get pemandus from the member database (Angkatan 33 + non-PSDM → Pemandu)
-export function getPemandusFromMembers(): LocalPemandu[] {
+export function getPemandusFromMembers(): (LocalPemandu & { nsa: string; angkatan: number; divisi: string })[] {
   return getMembers()
     .filter((m) => m.role === "pemandu" || m.role === "psdm_pemandu")
     .map((m) => ({
       id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || genId(),
       userId: 0,
       fullName: m.name,
-      email: m.email || `${m.nsa.toLowerCase()}@ufo.ugm.ac.id`,
+      email: m.nsa, // Use NSA as identifier
+      nsa: m.nsa,
+      angkatan: m.angkatan,
+      divisi: m.divisi,
       expertise: `${m.divisi} (Angkatan ${m.angkatan})`,
       maxMentees: 10,
       status: "active" as const,

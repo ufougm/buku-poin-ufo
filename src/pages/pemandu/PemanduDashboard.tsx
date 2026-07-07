@@ -45,14 +45,14 @@ export default function PemanduDashboard() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  // Find the pemandu record for this user using stored pemanduId
+  // Find the pemandu record for this user from the member database
   const myPemandu = useMemo(() => {
-    const mockUser = user as any;
-    if (mockUser?.pemanduId) {
-      return local.pemandus.find((m) => m.id === Number(mockUser.pemanduId)) || null;
-    }
-    return null;
-  }, [user, local.pemandus]);
+    if (!user?.name) return null;
+    // Look up pemandu by matching user's name in the real pemandu list
+    return local.getPemandusFromMembers().find(
+      (m) => m.fullName.toLowerCase() === user.name!.toLowerCase()
+    ) || null;
+  }, [user]);
 
   // Get CUFO for this pemandu (via kelompok or direct assignment)
   const cufos = useMemo(() => {

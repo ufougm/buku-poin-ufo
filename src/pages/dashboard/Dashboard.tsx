@@ -71,10 +71,10 @@ export default function MemberDashboard() {
   const [uploadError, setUploadError] = useState("");
 
   // Image compression utility
-  const compressImage = (file: File, maxWidth = 800, quality = 0.7): Promise<string> => {
+  const compressImage = (file: File, maxWidth = 800, quality = 0.6): Promise<string> => {
     return new Promise((resolve, reject) => {
-      if (file.size > 5 * 1024 * 1024) {
-        reject(new Error("File terlalu besar. Maksimum 5MB."));
+      if (file.size > 1 * 1024 * 1024) {
+        reject(new Error("File terlalu besar. Maksimum 1MB."));
         return;
       }
       const reader = new FileReader();
@@ -508,7 +508,7 @@ export default function MemberDashboard() {
                         <div className="flex flex-col items-center">
                           <Upload className="h-5 w-5 text-gray-400 mb-1" />
                           <span className="text-xs text-gray-500">Klik untuk upload foto</span>
-                          <span className="text-xs text-gray-400">(Max 4 foto, max 5MB each)</span>
+                          <span className="text-xs text-gray-400">(Max 4 foto, max 1MB each)</span>
                         </div>
                         <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
                       </label>

@@ -626,6 +626,37 @@ export function seedMembers() {
   setItem(KEYS.members, members);
 }
 
+// ─── Pemandu from Members ────────────────────────────────────────
+// Get pemandus from the member database (Angkatan 33 + non-PSDM → Pemandu)
+export function getPemandusFromMembers(): LocalPemandu[] {
+  return getMembers()
+    .filter((m) => m.role === "pemandu" || m.role === "psdm_pemandu")
+    .map((m) => ({
+      id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || genId(),
+      userId: 0,
+      fullName: m.name,
+      email: m.email || `${m.nsa.toLowerCase()}@ufo.ugm.ac.id`,
+      expertise: `${m.divisi} (Angkatan ${m.angkatan})`,
+      maxMentees: 10,
+      status: "active" as const,
+    }));
+}
+
+// Get PSDM members from the database
+export function getPsdmMembers(): LocalPemandu[] {
+  return getMembers()
+    .filter((m) => m.role === "psdm" || m.role === "psdm_pemandu")
+    .map((m) => ({
+      id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || genId(),
+      userId: 0,
+      fullName: m.name,
+      email: m.email || `${m.nsa.toLowerCase()}@ufo.ugm.ac.id`,
+      expertise: `${m.divisi} (Angkatan ${m.angkatan})`,
+      maxMentees: 10,
+      status: "active" as const,
+    }));
+}
+
 // ─── Registrant CRUD ──────────────────────────────────────────────
 export function updateRegistrant(id: number, updates: Partial<LocalRegistrant>) {
   const all = getRegistrants();
@@ -734,6 +765,7 @@ export function useLocalData() {
 
   // Auto-seed on first mount
   useEffect(() => {
+    seedMembers();
     seedDemoData();
     setVersion((v) => v + 1);
   }, []);
@@ -761,6 +793,8 @@ export function useLocalData() {
     updatePemandu,
     deletePemandu,
     getCUFOByPemandu,
+    getPemandusFromMembers,
+    getPsdmMembers,
     getMenteesByMentor: getCUFOByPemandu, // backward compat
     getPemanduById,
     getMentorById: getPemanduById, // backward compat

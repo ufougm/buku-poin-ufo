@@ -198,7 +198,7 @@ export default function Login() {
             <Tabs value={mode} onValueChange={(v) => { setMode(v as any); setError(""); }}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Masuk</TabsTrigger>
-                <TabsTrigger value="register">Daftar</TabsTrigger>
+                <TabsTrigger value="register">Daftar (Calon Anggota)</TabsTrigger>
               </TabsList>
 
               {/* ─── LOGIN ─── */}

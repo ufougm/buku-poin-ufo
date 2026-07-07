@@ -51,6 +51,7 @@ import { id } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import LocationSuggest from "@/components/LocationSuggest";
+import MotivationalToast from "@/components/MotivationalToast";
 
 export default function MemberDashboard() {
   const { user, isLoading } = useAuth();
@@ -672,6 +673,8 @@ export default function MemberDashboard() {
           </CardContent>
         </Card>
       </div>
+      {/* Floating motivational toast for Calon Anggota */}
+      {role === "user" && <MotivationalToast />}
     </MainLayout>
   );
 }

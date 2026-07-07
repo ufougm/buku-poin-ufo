@@ -11,9 +11,6 @@ import {
   HelpCircle,
   Camera,
   FileText,
-  Calendar,
-  MapPin,
-  Upload,
   ShieldCheck,
 } from "lucide-react";
 
@@ -143,13 +140,14 @@ export default function FaqBukuPoin() {
             <p className="text-sm font-medium text-gray-700 mb-3">Navigasi Cepat:</p>
             <div className="flex flex-wrap gap-2">
               {sections.map((s) => (
-                <a
+                <button
                   key={s.id}
-                  href={`#${s.id}`}
-                  className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-red-50 hover:text-red-700 rounded-full transition-colors"
+                  type="button"
+                  onClick={() => document.getElementById(`section-${s.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                  className="text-xs px-3 py-1.5 bg-gray-100 hover:bg-red-50 hover:text-red-700 rounded-full transition-colors cursor-pointer border-0"
                 >
                   {s.title.split(". ")[1] || s.title}
-                </a>
+                </button>
               ))}
             </div>
           </CardContent>
@@ -159,7 +157,7 @@ export default function FaqBukuPoin() {
         {sections.map((section) => (
           <Card
             key={section.id}
-            id={section.id}
+            id={`section-${section.id}`}
             className={`border-0 shadow-sm scroll-mt-20 ${
               section.highlight ? "ring-2 ring-red-200" : ""
             }`}

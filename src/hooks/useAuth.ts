@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 export interface SessionUser {
   id: string;
   name: string;
+  email?: string;
   role: string;
   angkatan?: number;
   divisi?: string;

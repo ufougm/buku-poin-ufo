@@ -122,7 +122,7 @@ export default function MemberDashboard() {
       if (!found) {
         found = local.addRegistrant({
           fullName: user.name,
-          email: (user as any)?.email || `${user.id}@placeholder.com`,
+          email: user?.email || `${user.id}@ufo.ugm.ac.id`,
           year: new Date().getFullYear().toString(),
           major: "Belum diisi",
         });

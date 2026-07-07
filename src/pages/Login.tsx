@@ -44,6 +44,7 @@ function findFreeUserByUsername(username: string): FreeUser | undefined {
 interface SessionUser {
   id: string;       // NSA or username
   name: string;
+  email?: string;
   role: string;
   angkatan?: number;
   divisi?: string;
@@ -115,6 +116,7 @@ export default function Login() {
       setSession({
         id: freeUser.username,
         name: freeUser.name,
+        email: freeUser.email,
         role: freeUser.role,
         isPreRegistered: false,
       });

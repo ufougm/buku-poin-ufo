@@ -7,6 +7,7 @@ import MemberDashboard from "./pages/dashboard/Dashboard";
 import PemanduDashboard from "./pages/pemandu/PemanduDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import FaqBukuPoin from "./pages/FaqBukuPoin";
+import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 
 export default function App() {
@@ -19,6 +20,11 @@ export default function App() {
 
       {/* FAQ - Public Tutorial Page */}
       <Route path="/faq-buku-poin" element={<FaqBukuPoin />} />
+
+      {/* Profile - All authenticated users */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/profile" element={<Profile />} />
+      </Route>
 
       {/* Member Routes */}
       <Route element={<ProtectedRoute allowedRoles={["user"]} />}>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { X, Quote, Camera } from "lucide-react";
+import { X, Camera } from "lucide-react";
 
-const MOTIVATIONAL_MESSAGES = [
+const MESSAGES = [
   {
     type: "motivation" as const,
     text: "Setiap klik \"+ Tambah Kegiatan\" adalah satu langkah lebih dekat untuk menjadi bagian resmi dari keluarga besar UFO UGM! 📸",
@@ -54,24 +54,26 @@ const MOTIVATIONAL_MESSAGES = [
 
 export default function MotivationalToast() {
   const [visible, setVisible] = useState(false);
-  const [message, setMessage] = useState(MOTIVATIONAL_MESSAGES[0]);
+  const [fadeOut, setFadeOut] = useState(false);
+  const [message, setMessage] = useState(MESSAGES[0]);
 
   useEffect(() => {
-    // Pick a random message
-    const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.length);
-    setMessage(MOTIVATIONAL_MESSAGES[randomIndex]);
+    const randomIndex = Math.floor(Math.random() * MESSAGES.length);
+    setMessage(MESSAGES[randomIndex]);
 
-    // Show after a short delay
-    const showTimer = setTimeout(() => setVisible(true), 800);
-
-    // Auto-dismiss after 8 seconds
-    const hideTimer = setTimeout(() => setVisible(false), 8800);
+    const showTimer = setTimeout(() => setVisible(true), 600);
+    const autoHideTimer = setTimeout(() => handleClose(), 8600);
 
     return () => {
       clearTimeout(showTimer);
-      clearTimeout(hideTimer);
+      clearTimeout(autoHideTimer);
     };
   }, []);
+
+  const handleClose = () => {
+    setFadeOut(true);
+    setTimeout(() => setVisible(false), 300);
+  };
 
   if (!visible) return null;
 
@@ -79,20 +81,33 @@ export default function MotivationalToast() {
   const isTagline = message.type === "tagline";
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-500">
+    <div
+      className={`fixed inset-0 z-[100] flex items-center justify-center transition-opacity duration-300 ${
+        fadeOut ? "opacity-0" : "opacity-100"
+      }`}
+    >
+      {/* Dark backdrop */}
       <div
-        className={`rounded-xl shadow-2xl border p-4 relative ${
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+
+      {/* Centered card */}
+      <div
+        className={`relative z-10 mx-4 w-full max-w-lg rounded-2xl shadow-2xl p-8 transform transition-all duration-300 ${
+          fadeOut ? "scale-95 opacity-0" : "scale-100 opacity-100"
+        } ${
           isQuote
-            ? "bg-gray-900 text-white border-gray-700"
+            ? "bg-gray-900 text-white border border-gray-700"
             : isTagline
-            ? "bg-gradient-to-r from-red-500 to-red-600 text-white border-red-400"
-            : "bg-white text-gray-800 border-gray-200"
+            ? "bg-gradient-to-br from-red-500 to-red-600 text-white border border-red-400"
+            : "bg-white text-gray-800 border border-gray-200"
         }`}
       >
         {/* Close button */}
         <button
-          onClick={() => setVisible(false)}
-          className={`absolute top-2 right-2 p-1 rounded-full transition-colors ${
+          onClick={handleClose}
+          className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
             isQuote
               ? "text-gray-400 hover:text-white hover:bg-gray-700"
               : isTagline
@@ -100,13 +115,13 @@ export default function MotivationalToast() {
               : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
           }`}
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
 
         {/* Icon */}
-        <div className="flex items-start gap-3">
+        <div className="flex justify-center mb-4">
           <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+            className={`w-14 h-14 rounded-full flex items-center justify-center ${
               isQuote
                 ? "bg-gray-700"
                 : isTagline
@@ -114,24 +129,39 @@ export default function MotivationalToast() {
                 : "bg-red-50"
             }`}
           >
-            {isQuote ? (
-              <Quote className="h-4 w-4 text-yellow-400" />
-            ) : (
-              <Camera className={`h-4 w-4 ${isTagline ? "text-white" : "text-red-500"}`} />
-            )}
-          </div>
-
-          {/* Message */}
-          <div className="flex-1 pr-4">
-            <p
-              className={`text-sm leading-relaxed whitespace-pre-line ${
-                isQuote ? "text-gray-200 italic" : isTagline ? "font-semibold" : "text-gray-700"
+            <Camera
+              className={`h-7 w-7 ${
+                isQuote ? "text-yellow-400" : isTagline ? "text-white" : "text-red-500"
               }`}
-            >
-              {message.text}
-            </p>
+            />
           </div>
         </div>
+
+        {/* Message */}
+        <p
+          className={`text-center text-lg leading-relaxed whitespace-pre-line ${
+            isQuote
+              ? "text-gray-200 italic font-medium"
+              : isTagline
+              ? "font-bold text-xl"
+              : "text-gray-700 font-medium"
+          }`}
+        >
+          {message.text}
+        </p>
+
+        {/* Footer hint */}
+        <p
+          className={`text-center text-xs mt-5 ${
+            isQuote
+              ? "text-gray-500"
+              : isTagline
+              ? "text-red-200"
+              : "text-gray-400"
+          }`}
+        >
+          Klik X atau klik di luar popup untuk menutup
+        </p>
       </div>
     </div>
   );

@@ -54,7 +54,7 @@ import LocationSuggest from "@/components/LocationSuggest";
 import MotivationalToast from "@/components/MotivationalToast";
 
 export default function MemberDashboard() {
-  const { user, isLoading } = useAuth();
+  const { user, isUser, isLoading } = useAuth();
   const local = useLocalData();
   const [myRegistrant, setMyRegistrant] = useState<LocalRegistrant | null>(null);
   const [showRegister, setShowRegister] = useState(false);
@@ -674,7 +674,7 @@ export default function MemberDashboard() {
         </Card>
       </div>
       {/* Floating motivational toast for Calon Anggota */}
-      {role === "user" && <MotivationalToast />}
+      {isUser && <MotivationalToast />}
     </MainLayout>
   );
 }

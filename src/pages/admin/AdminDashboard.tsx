@@ -75,7 +75,7 @@ export default function AdminDashboard() {
     const registrants = local.registrants;
     const pemandus = local.pemandus;
     const activities = local.activities;
-    const assignments = local.assignments;
+    const assignments = local.pemanduAssignments;
     const kelompoks = local.kelompoks;
     const kelompokAssignments = local.kelompokAssignments;
 
@@ -227,7 +227,7 @@ export default function AdminDashboard() {
   const handleSaveVerified = async () => {
     if (!verifiedForm.serialNumber.trim() || !verifiedForm.fullName.trim()) return;
     if (editingVerified) {
-      await local.updateVerifiedMember(editingVerified.serialNumber, {
+      await local.updateVerifiedMember(editingVerified.nsa, {
         serialNumber: verifiedForm.serialNumber.trim(),
         fullName: verifiedForm.fullName.trim(),
         email: verifiedForm.email.trim(),
@@ -670,17 +670,17 @@ export default function AdminDashboard() {
                       </TableHeader>
                       <TableBody>
                         {local.verifiedMembers.map((v) => (
-                          <TableRow key={v.serialNumber}>
-                            <TableCell className="font-mono text-xs">{v.serialNumber}</TableCell>
-                            <TableCell className="font-medium">{v.fullName}</TableCell>
-                            <TableCell>{v.email}</TableCell>
-                            <TableCell><Badge className={v.role === "psdm" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}>{v.role === "psdm" ? "PSDM" : "Pemandu"}</Badge></TableCell>
+                          <TableRow key={v.nsa}>
+                            <TableCell className="font-mono text-xs">{v.nsa}</TableCell>
+                            <TableCell className="font-medium">{v.name}</TableCell>
+                            <TableCell>{v.email || "-"}</TableCell>
+                            <TableCell><Badge className={v.role === "psdm" || v.role === "psdm_pemandu" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}>{v.role === "psdm" || v.role === "psdm_pemandu" ? "PSDM" : "Pemandu"}</Badge></TableCell>
                             <TableCell>
                               <div className="flex gap-1">
-                                <Button size="sm" variant="ghost" onClick={() => { setEditingVerified(v); setVerifiedForm({ serialNumber: v.serialNumber, fullName: v.fullName, email: v.email, role: v.role }); setShowVerifiedForm(true); }}>
+                                <Button size="sm" variant="ghost" onClick={() => { setEditingVerified(v); setVerifiedForm({ serialNumber: v.nsa, fullName: v.name, email: v.email || "", role: v.role === "psdm" || v.role === "psdm_pemandu" ? "psdm" : "pemandu" }); setShowVerifiedForm(true); }}>
                                   <Edit3 className="h-3.5 w-3.5 text-blue-500" />
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ type: "verified", id: v.serialNumber })}>
+                                <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ type: "verified", id: v.nsa })}>
                                   <Trash2 className="h-3.5 w-3.5 text-red-500" />
                                 </Button>
                               </div>

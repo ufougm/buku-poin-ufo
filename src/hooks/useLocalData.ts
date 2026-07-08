@@ -310,6 +310,75 @@ async function sbDeleteKelompok(id: number) {
   await supabase.from("kelompoks").delete().eq("id", id);
 }
 
+// ─── Standalone Pemandu CRUD (admin-managed, separate from members) ──
+interface StandalonePemandu {
+  id: number;
+  fullName: string;
+  email: string;
+  expertise: string;
+  maxMentees: number;
+  createdAt: string;
+}
+function getStandalonePemandus(): StandalonePemandu[] {
+  return lsGet<StandalonePemandu[]>("standalone_pemandus", []);
+}
+function setStandalonePemandus(list: StandalonePemandu[]) {
+  lsSet("standalone_pemandus", list);
+}
+export async function addPemandu(data: { userId: number; fullName: string; email: string; expertise: string; maxMentees: number }) {
+  const item: StandalonePemandu = { id: genId(), fullName: data.fullName, email: data.email, expertise: data.expertise, maxMentees: data.maxMentees, createdAt: new Date().toISOString() };
+  setStandalonePemandus([...getStandalonePemandus(), item]);
+}
+export async function updatePemandu(id: number, updates: Partial<StandalonePemandu>) {
+  setStandalonePemandus(getStandalonePemandus().map((p) => p.id === id ? { ...p, ...updates } : p));
+}
+export async function deletePemandu(id: number) {
+  setStandalonePemandus(getStandalonePemandus().filter((p) => p.id !== id));
+}
+
+// ─── Verified Member CRUD (admin-managed overrides to PRE_REGISTERED) ──
+function getVerifiedMemberOverrides(): { added: LocalMember[]; removed: string[] } {
+  return lsGet("verified_overrides", { added: [], removed: [] });
+}
+function setVerifiedMemberOverrides(o: { added: LocalMember[]; removed: string[] }) {
+  lsSet("verified_overrides", o);
+}
+export function getVerifiedMembers(): LocalMember[] {
+  const overrides = getVerifiedMemberOverrides();
+  const base = getMembers();
+  const withRemoved = base.filter((m) => !overrides.removed.includes(m.nsa));
+  return [...withRemoved, ...overrides.added];
+}
+export async function addVerifiedMember(data: { serialNumber: string; fullName: string; email: string; role: "pemandu" | "psdm" }) {
+  const all = getMembers();
+  if (all.some((m) => m.nsa === data.serialNumber)) throw new Error("Nomor seri sudah terdaftar");
+  const overrides = getVerifiedMemberOverrides();
+  const newMember: LocalMember = { nsa: data.serialNumber, name: data.fullName, angkatan: 0, divisi: "", role: data.role, password: "123456", email: data.email, isPreRegistered: true };
+  overrides.added.push(newMember);
+  setVerifiedMemberOverrides(overrides);
+  // Also add to members list
+  lsSet("members", [...all, newMember]);
+}
+export async function updateVerifiedMember(serialNumber: string, updates: { serialNumber: string; fullName: string; email: string; role: "pemandu" | "psdm" }) {
+  // Update in members list
+  const all = getMembers();
+  const updated = all.map((m) => m.nsa === serialNumber ? { ...m, nsa: updates.serialNumber, name: updates.fullName, email: updates.email, role: updates.role } : m);
+  lsSet("members", updated);
+  // Update in overrides if it's an added member
+  const overrides = getVerifiedMemberOverrides();
+  overrides.added = overrides.added.map((m) => m.nsa === serialNumber ? { ...m, nsa: updates.serialNumber, name: updates.fullName, email: updates.email, role: updates.role } : m);
+  setVerifiedMemberOverrides(overrides);
+}
+export async function deleteVerifiedMember(serialNumber: string) {
+  const overrides = getVerifiedMemberOverrides();
+  overrides.removed.push(serialNumber);
+  overrides.added = overrides.added.filter((m) => m.nsa !== serialNumber);
+  setVerifiedMemberOverrides(overrides);
+  // Also remove from members list
+  const all = getMembers();
+  lsSet("members", all.filter((m) => m.nsa !== serialNumber));
+}
+
 async function sbAddMember(m: Omit<LocalMember, "isPreRegistered">): Promise<void> {
   if (!IS_LIVE) {
     const all = lsGet<LocalMember[]>("members", []);
@@ -598,12 +667,13 @@ export function useLocalData() {
   const getRegistrantByEmail = (email: string) => registrants.find((r) => r.email.toLowerCase() === email.toLowerCase());
   const getRegistrantById = (id: number) => registrants.find((r) => r.id === id);
   const getMemberByNSA = (nsa: string) => members.find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
-  const getPemanduById = (id: number) => getPemandusFromMembers(members).find((p) => p.id === id);
+  const allPemandus = [...getPemandusFromMembers(members), ...getStandalonePemandus().map((p) => ({ ...p, status: "active" as const, userId: 0 }))];
+  const getPemanduById = (id: number) => allPemandus.find((p) => p.id === id);
   const getKelompokForRegistrant = (registrantId: number) => kelompoks.find((k) => kelompokAssignments.some((ka) => ka.registrantId === registrantId && ka.kelompokId === k.id));
   const getPemandusForRegistrant = (registrantId: number) => {
     const k = getKelompokForRegistrant(registrantId);
     if (!k) return [];
-    return getPemandusFromMembers(members).filter((p) => k.pemanduIds.includes(p.id));
+    return allPemandus.filter((p) => k.pemanduIds.includes(p.id));
   };
   const getKelompokNameForRegistrant = (registrantId: number) => getKelompokForRegistrant(registrantId)?.name || "Belum ditugaskan";
   const getCUFOByPemandu = (pemanduId: number) => {
@@ -638,13 +708,13 @@ export function useLocalData() {
     registrants,
     activities,
     members,
-    pemandus: getPemandusFromMembers(members),
+    pemandus: [...getPemandusFromMembers(members), ...getStandalonePemandus().map((p) => ({ ...p, status: "active" as const, userId: 0 }))],
     kelompoks,
     kelompokAssignments,
     pemanduAssignments,
     locations,
     activityTypes: ACTIVITY_TYPES,
-    verifiedMembers: PRE_REGISTERED_MEMBERS,
+    verifiedMembers: members.filter((m) => m.isPreRegistered),
     // CRUD
     addRegistrant,
     addActivity,
@@ -658,6 +728,14 @@ export function useLocalData() {
     updateMember,
     addLocation,
     deleteLocation,
+    // Pemandu CRUD
+    addPemandu,
+    updatePemandu,
+    deletePemandu,
+    // Verified member CRUD
+    addVerifiedMember,
+    updateVerifiedMember,
+    deleteVerifiedMember,
     // Queries
     getRegistrantByEmail,
     getRegistrantById,

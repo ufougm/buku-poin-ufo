@@ -4,6 +4,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 export const IS_LIVE = !!(supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith("https://"));
+export const SYNC_STATUS = IS_LIVE ? "live" as const : "local" as const;
 
 // Create a dummy client when not configured (localStorage fallback mode)
 let client: any;

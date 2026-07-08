@@ -606,6 +606,19 @@ export function useLocalData() {
     return getPemandusFromMembers(members).filter((p) => k.pemanduIds.includes(p.id));
   };
   const getKelompokNameForRegistrant = (registrantId: number) => getKelompokForRegistrant(registrantId)?.name || "Belum ditugaskan";
+  const getCUFOByPemandu = (pemanduId: number) => {
+    // Find kelompoks where this pemandu is assigned
+    const pemanduKelompoks = kelompoks.filter((k) => k.pemanduIds.includes(pemanduId));
+    const kelompokIds = pemanduKelompoks.map((k) => k.id);
+    // Find all registrants in those kelompoks
+    return kelompokAssignments
+      .filter((ka) => kelompokIds.includes(ka.kelompokId))
+      .map((ka) => {
+        const reg = registrants.find((r) => r.id === ka.registrantId);
+        return reg ? { registrantId: reg.id, registrantName: reg.fullName, registrantEmail: reg.email, registrantYear: reg.year, registrantMajor: reg.major } : null;
+      })
+      .filter(Boolean);
+  };
   const getActivitiesByRegistrant = (registrantId: number) => activities.filter((a) => a.registrantId === registrantId);
   const getPointSummary = (registrantId: number) => {
     const acts = getActivitiesByRegistrant(registrantId);
@@ -653,6 +666,7 @@ export function useLocalData() {
     getKelompokForRegistrant,
     getPemandusForRegistrant,
     getKelompokNameForRegistrant,
+    getCUFOByPemandu,
     getActivitiesByRegistrant,
     getPointSummary,
   };

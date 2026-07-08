@@ -73,7 +73,7 @@ export default function AdminDashboard() {
   // Get data from localStorage
   const data = useMemo(() => {
     const registrants = local.registrants;
-    const pemandus = local.getPemandusFromMembers();
+    const pemandus = local.pemandus;
     const activities = local.activities;
     const assignments = local.assignments;
     const kelompoks = local.kelompoks;

@@ -49,7 +49,7 @@ export default function PemanduDashboard() {
   const myPemandu = useMemo(() => {
     if (!user?.name) return null;
     // Look up pemandu by matching user's name in the real pemandu list
-    return local.getPemandusFromMembers().find(
+    return local.pemandus.find(
       (m) => m.fullName.toLowerCase() === user.name!.toLowerCase()
     ) || null;
   }, [user]);

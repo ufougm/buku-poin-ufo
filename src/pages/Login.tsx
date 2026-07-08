@@ -53,6 +53,7 @@ interface SessionUser {
 
 function setSession(user: SessionUser) {
   localStorage.setItem("ukm_session_user", JSON.stringify(user));
+  localStorage.setItem("ukm_session_user_ts", String(Date.now()));
   // Redirect based on effective role
   const effectiveRole = user.role === "psdm_pemandu" ? "psdm" : user.role;
   if (effectiveRole === "psdm") {

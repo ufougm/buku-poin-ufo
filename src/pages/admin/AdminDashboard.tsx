@@ -348,11 +348,11 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="flex flex-wrap h-auto">
-            <TabsTrigger value="overview"><BarChart3 className="h-4 w-4 mr-2" />Overview</TabsTrigger>
-            <TabsTrigger value="pemandu-mapping"><LinkIcon className="h-4 w-4 mr-2" />Pemetaan Pemandu</TabsTrigger>
-            <TabsTrigger value="activities"><Activity className="h-4 w-4 mr-2" />Kegiatan</TabsTrigger>
-            <TabsTrigger value="data-management"><Database className="h-4 w-4 mr-2" />Manajemen Data</TabsTrigger>
+          <TabsList className="flex h-auto overflow-x-auto whitespace-nowrap scrollbar-hide w-full">
+            <TabsTrigger value="overview" className="shrink-0"><BarChart3 className="h-4 w-4 mr-1.5 shrink-0" />Overview</TabsTrigger>
+            <TabsTrigger value="pemandu-mapping" className="shrink-0"><LinkIcon className="h-4 w-4 mr-1.5 shrink-0" />Pemetaan</TabsTrigger>
+            <TabsTrigger value="activities" className="shrink-0"><Activity className="h-4 w-4 mr-1.5 shrink-0" />Kegiatan</TabsTrigger>
+            <TabsTrigger value="data-management" className="shrink-0"><Database className="h-4 w-4 mr-1.5 shrink-0" />Data</TabsTrigger>
           </TabsList>
 
           {/* Overview */}
@@ -439,10 +439,10 @@ export default function AdminDashboard() {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Kelompok</label>
                     <Select value={selectedKelompok} onValueChange={setSelectedKelompok}>
-                      <SelectTrigger><SelectValue placeholder="Pilih kelompok" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectTrigger className="w-full truncate"><SelectValue placeholder="Pilih kelompok" className="truncate" /></SelectTrigger>
+                      <SelectContent className="max-w-[90vw]">
                         {data.kelompokData.map((k: any) => (
-                          <SelectItem key={k.id} value={k.id.toString()}>
+                          <SelectItem key={k.id} value={k.id.toString()} className="truncate max-w-[80vw]">
                             {k.name} ({k.pemandu1Name} & {k.pemandu2Name})
                           </SelectItem>
                         ))}
@@ -452,9 +452,9 @@ export default function AdminDashboard() {
                   <div>
                     <label className="text-sm font-medium mb-2 block">CUFO (Belum Ditugaskan)</label>
                     <Select value={selectedRegistrant} onValueChange={setSelectedRegistrant}>
-                      <SelectTrigger><SelectValue placeholder="Pilih CUFO" /></SelectTrigger>
-                      <SelectContent>
-                        {data.unassigned.map((r) => <SelectItem key={r.id} value={r.id.toString()}>{r.fullName} ({r.year})</SelectItem>)}
+                      <SelectTrigger className="w-full truncate"><SelectValue placeholder="Pilih CUFO" className="truncate" /></SelectTrigger>
+                      <SelectContent className="max-w-[90vw]">
+                        {data.unassigned.map((r) => <SelectItem key={r.id} value={r.id.toString()} className="truncate max-w-[80vw]">{r.fullName} ({r.year})</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>

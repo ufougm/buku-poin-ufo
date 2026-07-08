@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, User, Lock, ShieldCheck, Users, Save, AlertTriangle } from "lucide-react";
-import { getFreeUsers, getMembers, updateMember } from "@/hooks/useLocalData";
+import { getMembers, updateMember } from "@/hooks/useLocalData";
 
 const FREE_USERS_KEY = "ukm_free_users";
 const SESSION_KEY = "ukm_session_user";

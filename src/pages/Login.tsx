@@ -163,6 +163,7 @@ export default function Login() {
     setSession({
       id: newUser.username,
       name: newUser.name,
+      email: newUser.email,
       role: "user",
       isPreRegistered: false,
     });

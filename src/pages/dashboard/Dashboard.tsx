@@ -112,15 +112,14 @@ export default function MemberDashboard() {
 
   // Find or auto-create registrant
   useEffect(() => {
-    if (user?.name) {
-      // Try find by name match
+    async function ensureRegistrant() {
+      if (!user?.name) return;
       let found = local.registrants.find((r) =>
         r.fullName.toLowerCase().includes(user.name!.toLowerCase()) ||
         user.name!.toLowerCase().includes(r.fullName.toLowerCase())
       );
-      // Auto-create if not found (new Calon Anggota from free signup)
       if (!found) {
-        found = local.addRegistrant({
+        found = await local.addRegistrant({
           fullName: user.name,
           email: user?.email || `${user.id}@ufo.ugm.ac.id`,
           year: new Date().getFullYear().toString(),
@@ -129,7 +128,8 @@ export default function MemberDashboard() {
       }
       if (found) setMyRegistrant(found);
     }
-  }, [user?.name, user?.id, refreshTick]);
+    ensureRegistrant();
+  }, [user?.name, user?.id, refreshTick, local.registrants.length]);
 
   const activities = useMemo(
     () => (myRegistrant ? local.getActivitiesByRegistrant(myRegistrant.id) : []),
@@ -181,11 +181,11 @@ export default function MemberDashboard() {
     setUploadedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!user?.name || !regYear || !regMajor) return;
-    const newReg = local.addRegistrant({
+    const newReg = await local.addRegistrant({
       fullName: user.name,
-      email: (user as any)?.email || `${user.id}@placeholder.com`,
+      email: user?.email || `${user.id}@ufo.ugm.ac.id`,
       year: regYear,
       major: regMajor,
       faculty: regFaculty || undefined,
@@ -197,13 +197,13 @@ export default function MemberDashboard() {
     setRefreshTick((t) => t + 1);
   };
 
-  const handleSubmitActivity = (e: React.FormEvent) => {
+  const handleSubmitActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!myRegistrant || !activityTypeId) return;
     setUploadError("");
 
     try {
-      local.addActivity({
+      await local.addActivity({
         registrantId: myRegistrant.id,
         activityTypeId: Number(activityTypeId),
         activityName,
@@ -219,11 +219,7 @@ export default function MemberDashboard() {
       resetForm();
       setRefreshTick((t) => t + 1);
     } catch (err: any) {
-      if (err.name === "QuotaExceededError" || err.message?.includes("quota") || err.message?.includes("exceeded")) {
-        setUploadError("Penyimpanan penuh. Coba hapus beberapa foto atau kurangi ukurannya.");
-      } else {
-        setUploadError("Gagal menyimpan kegiatan. Coba lagi.");
-      }
+      setUploadError("Gagal menyimpan kegiatan. Coba lagi.");
     }
   };
 

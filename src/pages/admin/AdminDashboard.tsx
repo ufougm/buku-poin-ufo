@@ -178,33 +178,33 @@ export default function AdminDashboard() {
     return { stats, recentActivities, topRegistrants, activityDistribution, pemanduStats, allAssignments, unassigned, registrants, pemandus, kelompokData, kelompoks };
   }, [refreshTick]);
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!selectedKelompok || !selectedRegistrant) return;
-    local.assignRegistrantToKelompok(Number(selectedRegistrant), Number(selectedKelompok));
+    await local.assignRegistrantToKelompok(Number(selectedRegistrant), Number(selectedKelompok));
     setRefreshTick((t) => t + 1);
     setSelectedKelompok("");
     setSelectedRegistrant("");
   };
 
-  const handleRemove = (registrantId: number) => {
-    local.removeRegistrantFromKelompok(registrantId);
+  const handleRemove = async (registrantId: number) => {
+    await local.removeRegistrantFromKelompok(registrantId);
     setRefreshTick((t) => t + 1);
   };
 
   // ─── Data Management Handlers ────────────────────────────────────
   const refreshData = () => setRefreshTick((t) => t + 1);
 
-  const handleSavePemandu = () => {
+  const handleSavePemandu = async () => {
     if (!pemanduForm.fullName.trim() || !pemanduForm.email.trim()) return;
     if (editingPemandu) {
-      local.updatePemandu(editingPemandu.id, {
+      await local.updatePemandu(editingPemandu.id, {
         fullName: pemanduForm.fullName.trim(),
         email: pemanduForm.email.trim(),
         expertise: pemanduForm.expertise.trim(),
         maxMentees: Number(pemanduForm.maxMentees) || 10,
       });
     } else {
-      local.addPemandu({
+      await local.addPemandu({
         userId: 0,
         fullName: pemanduForm.fullName.trim(),
         email: pemanduForm.email.trim(),
@@ -218,16 +218,16 @@ export default function AdminDashboard() {
     refreshData();
   };
 
-  const handleDeletePemandu = (id: number) => {
-    local.deletePemandu(id);
+  const handleDeletePemandu = async (id: number) => {
+    await local.deletePemandu(id);
     setDeleteConfirm(null);
     refreshData();
   };
 
-  const handleSaveVerified = () => {
+  const handleSaveVerified = async () => {
     if (!verifiedForm.serialNumber.trim() || !verifiedForm.fullName.trim()) return;
     if (editingVerified) {
-      local.updateVerifiedMember(editingVerified.serialNumber, {
+      await local.updateVerifiedMember(editingVerified.serialNumber, {
         serialNumber: verifiedForm.serialNumber.trim(),
         fullName: verifiedForm.fullName.trim(),
         email: verifiedForm.email.trim(),
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
       });
     } else {
       try {
-        local.addVerifiedMember({
+        await local.addVerifiedMember({
           serialNumber: verifiedForm.serialNumber.trim(),
           fullName: verifiedForm.fullName.trim(),
           email: verifiedForm.email.trim(),
@@ -252,32 +252,32 @@ export default function AdminDashboard() {
     refreshData();
   };
 
-  const handleDeleteVerified = (serialNumber: string) => {
-    local.deleteVerifiedMember(serialNumber);
+  const handleDeleteVerified = async (serialNumber: string) => {
+    await local.deleteVerifiedMember(serialNumber);
     setDeleteConfirm(null);
     refreshData();
   };
 
-  const handleAddLocation = () => {
+  const handleAddLocation = async () => {
     if (!newLocation.trim()) return;
-    local.addLocation(newLocation.trim());
+    await local.addLocation(newLocation.trim());
     setNewLocation("");
     refreshData();
   };
 
-  const handleDeleteLocation = (name: string) => {
-    local.deleteLocation(name);
+  const handleDeleteLocation = async (name: string) => {
+    await local.deleteLocation(name);
     refreshData();
   };
 
-  const handleDeleteRegistrant = (id: number) => {
-    local.deleteRegistrant(id);
+  const handleDeleteRegistrant = async (id: number) => {
+    await local.deleteRegistrant(id);
     setDeleteConfirm(null);
     refreshData();
   };
 
   // ─── Kelompok CRUD Handlers ──────────────────────────────────────
-  const handleSaveKelompok = () => {
+  const handleSaveKelompok = async () => {
     if (!kelompokForm.name.trim() || !kelompokForm.pemanduId1 || !kelompokForm.pemanduId2) return;
     if (kelompokForm.pemanduId1 === kelompokForm.pemanduId2) {
       alert("Pemandu 1 dan Pemandu 2 harus berbeda");
@@ -285,12 +285,12 @@ export default function AdminDashboard() {
     }
     const pemanduIds = [Number(kelompokForm.pemanduId1), Number(kelompokForm.pemanduId2)];
     if (editingKelompok) {
-      local.updateKelompok(editingKelompok.id, {
+      await local.updateKelompok(editingKelompok.id, {
         name: kelompokForm.name.trim(),
         pemanduIds,
       });
     } else {
-      local.addKelompok({
+      await local.addKelompok({
         name: kelompokForm.name.trim(),
         pemanduIds,
       });
@@ -301,8 +301,8 @@ export default function AdminDashboard() {
     refreshData();
   };
 
-  const handleDeleteKelompok = (id: number) => {
-    local.deleteKelompok(id);
+  const handleDeleteKelompok = async (id: number) => {
+    await local.deleteKelompok(id);
     setDeleteConfirm(null);
     refreshData();
   };

@@ -81,15 +81,15 @@ export default function PemanduDashboard() {
     return local.activities.filter((a) => cufoIds.includes(a.registrantId) && a.status === "verified").length;
   }, [myPemandu, cufos, refreshTick]);
 
-  const handleApprove = (activityId: number) => {
-    local.updateActivity(activityId, { status: "verified", verifiedAt: new Date().toISOString(), verifiedBy: myPemandu?.id });
+  const handleApprove = async (activityId: number) => {
+    await local.updateActivity(activityId, { status: "verified", verifiedAt: new Date().toISOString(), verifiedBy: myPemandu?.id?.toString() });
     setRefreshTick((t) => t + 1);
     setSelectedActivity(null);
     setDetailsOpen(false);
   };
 
-  const handleReject = (activityId: number) => {
-    local.updateActivity(activityId, { status: "rejected", notes: rejectionNote || undefined });
+  const handleReject = async (activityId: number) => {
+    await local.updateActivity(activityId, { status: "rejected", notes: rejectionNote || undefined });
     setRefreshTick((t) => t + 1);
     setSelectedActivity(null);
     setRejectionNote("");

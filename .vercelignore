@@ -2,7 +2,6 @@
 # Vercel should only see and build the frontend
 
 # Hide backend folders from Vercel (static deploy only)
-api/
 db/
 contracts/
 supabase/

@@ -38,6 +38,7 @@ import {
   Edit3,
   X,
   UserCircle,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Dialog,
@@ -48,6 +49,81 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+function safeCompute(local: any) {
+  try {
+    const registrants = local.registrants || [];
+    const pemandus = local.pemandus || [];
+    const activities = local.activities || [];
+    const assignments = local.pemanduAssignments || [];
+    const kelompoks = local.kelompoks || [];
+    const kelompokAssignments = local.kelompokAssignments || [];
+
+    const assignedKaIds = new Set(kelompokAssignments.map((a: any) => a.registrantId));
+    const unassigned = registrants.filter((r: any) => !assignedKaIds.has(r.id) && r.status === "active");
+
+    const stats = {
+      users: registrants.length + pemandus.length,
+      pemandus: pemandus.length,
+      registrants: registrants.length,
+      activities: activities.length,
+      pendingActivities: activities.filter((a: any) => a.status === "pending").length,
+      verifiedActivities: activities.filter((a: any) => a.status === "verified").length,
+      totalPoints: activities.filter((a: any) => a.status === "verified").reduce((sum: number, a: any) => sum + a.points, 0),
+      pemanduAssignments: assignments.length,
+    };
+
+    const recentActivities = [...activities]
+      .sort((a: any, b: any) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime())
+      .slice(0, 10)
+      .map((a: any) => {
+        const reg = registrants.find((r: any) => r.id === a.registrantId);
+        const atype = (local.activityTypes || []).find((t: any) => t.id === a.activityTypeId);
+        return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
+      });
+
+    const topRegistrants = registrants
+      .map((r: any) => {
+        const regActivities = activities.filter((a: any) => a.registrantId === r.id && a.status === "verified");
+        return { registrantId: r.id, registrantName: r.fullName, totalPoints: regActivities.reduce((sum: number, a: any) => sum + a.points, 0), activityCount: regActivities.length };
+      })
+      .sort((a: any, b: any) => b.totalPoints - a.totalPoints)
+      .slice(0, 5);
+
+    const activityDistribution = (local.activityTypes || [])
+      .map((t: any) => {
+        const typeActs = activities.filter((a: any) => a.activityTypeId === t.id && a.status === "verified");
+        return { activityTypeName: t.name, count: typeActs.length, totalPoints: typeActs.reduce((sum: number, a: any) => sum + a.points, 0) };
+      })
+      .filter((d: any) => d.count > 0)
+      .sort((a: any, b: any) => b.totalPoints - a.totalPoints);
+
+    const pemanduStats = pemandus.map((m: any) => {
+      const pemanduKelompoks = kelompoks.filter((k: any) => (k.pemanduIds || []).includes(m.id));
+      const kelompokIds = pemanduKelompoks.map((k: any) => k.id);
+      const cufoCount = new Set(kelompokAssignments.filter((ka: any) => kelompokIds.includes(ka.kelompokId)).map((ka: any) => ka.registrantId)).size;
+      return { pemanduId: m.id, pemanduName: m.fullName || m.name || "-", cufoCount, maxMentees: m.maxMentees || 10 };
+    });
+
+    const allAssignments = kelompokAssignments.map((ka: any) => {
+      const kelompok = kelompoks.find((k: any) => k.id === ka.kelompokId);
+      const reg = registrants.find((r: any) => r.id === ka.registrantId);
+      const pemanduNames = kelompok ? (kelompok.pemanduIds || []).map((pid: number) => pemandus.find((p: any) => p.id === pid)?.fullName || "-").join(" & ") : "-";
+      return { assignmentId: ka.id, kelompokId: ka.kelompokId, kelompokName: kelompok?.name || "-", pemanduNames, registrantId: ka.registrantId, registrantName: reg?.fullName || "-", registrantEmail: reg?.email || "-", registrantYear: reg?.year || "-", registrantMajor: reg?.major || "-" };
+    });
+
+    const kelompokData = kelompoks.map((k: any) => {
+      const p1 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[0]);
+      const p2 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[1]);
+      const cufoCount = kelompokAssignments.filter((ka: any) => ka.kelompokId === k.id).length;
+      return { ...k, pemandu1Name: p1?.fullName || "-", pemandu2Name: p2?.fullName || "-", cufoCount };
+    });
+
+    return { stats, recentActivities, topRegistrants, activityDistribution, pemanduStats, allAssignments, unassigned, registrants, pemandus, kelompokData, kelompoks, error: null };
+  } catch (e: any) {
+    console.error("AdminDashboard data compute error:", e);
+    return { error: e.message || "Unknown error", stats: { users: 0, pemandus: 0, registrants: 0, activities: 0, pendingActivities: 0, verifiedActivities: 0, totalPoints: 0, pemanduAssignments: 0 }, recentActivities: [], topRegistrants: [], activityDistribution: [], pemanduStats: [], allAssignments: [], unassigned: [], registrants: [], pemandus: [], kelompokData: [], kelompoks: [] };
+  }
+}
 
 export default function AdminDashboard() {
   const local = useLocalData();
@@ -70,113 +146,8 @@ export default function AdminDashboard() {
   const [kelompokForm, setKelompokForm] = useState({ name: "", pemanduId1: "", pemanduId2: "" });
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: any } | null>(null);
 
-  // Get data from localStorage
-  const data = useMemo(() => {
-    const registrants = local.registrants;
-    const pemandus = local.pemandus;
-    const activities = local.activities;
-    const assignments = local.pemanduAssignments;
-    const kelompoks = local.kelompoks;
-    const kelompokAssignments = local.kelompokAssignments;
-
-    // Unassigned registrants (check kelompok assignments)
-    const assignedKaIds = new Set(kelompokAssignments.map((a) => a.registrantId));
-    const unassigned = registrants.filter((r) => !assignedKaIds.has(r.id) && r.status === "active");
-
-    // Stats
-    const stats = {
-      users: registrants.length + pemandus.length,
-      pemandus: pemandus.length,
-      registrants: registrants.length,
-      activities: activities.length,
-      pendingActivities: activities.filter((a) => a.status === "pending").length,
-      verifiedActivities: activities.filter((a) => a.status === "verified").length,
-      totalPoints: activities.filter((a) => a.status === "verified").reduce((sum, a) => sum + a.points, 0),
-      pemanduAssignments: assignments.length,
-    };
-
-    // Recent activities with names
-    const recentActivities = [...activities]
-      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-      .slice(0, 10)
-      .map((a) => {
-        const reg = registrants.find((r) => r.id === a.registrantId);
-        const atype = local.activityTypes.find((t) => t.id === a.activityTypeId);
-        return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
-      });
-
-    // Top registrants by verified points
-    const topRegistrants = registrants
-      .map((r) => {
-        const regActivities = activities.filter((a) => a.registrantId === r.id && a.status === "verified");
-        return {
-          registrantId: r.id,
-          registrantName: r.fullName,
-          totalPoints: regActivities.reduce((sum, a) => sum + a.points, 0),
-          activityCount: regActivities.length,
-        };
-      })
-      .sort((a, b) => b.totalPoints - a.totalPoints)
-      .slice(0, 5);
-
-    // Activity distribution
-    const activityDistribution = local.activityTypes
-      .map((t) => {
-        const typeActs = activities.filter((a) => a.activityTypeId === t.id && a.status === "verified");
-        return { activityTypeName: t.name, count: typeActs.length, totalPoints: typeActs.reduce((sum, a) => sum + a.points, 0) };
-      })
-      .filter((d) => d.count > 0)
-      .sort((a, b) => b.totalPoints - a.totalPoints);
-
-    // Pemandu stats (count unique registrants per pemandu via kelompok)
-    const pemanduStats = pemandus.map((m) => {
-      // Find kelompoks containing this pemandu
-      const pemanduKelompoks = kelompoks.filter((k) => k.pemanduIds.includes(m.id));
-      const kelompokIds = pemanduKelompoks.map((k) => k.id);
-      // Count unique registrants in those kelompoks
-      const cufoCount = new Set(
-        kelompokAssignments
-          .filter((ka) => kelompokIds.includes(ka.kelompokId))
-          .map((ka) => ka.registrantId)
-      ).size;
-      return { pemanduId: m.id, pemanduName: m.fullName, cufoCount, maxMentees: m.maxMentees };
-    });
-
-    // All assignments with names (via kelompok)
-    const allAssignments = kelompokAssignments.map((ka) => {
-      const kelompok = kelompoks.find((k) => k.id === ka.kelompokId);
-      const reg = registrants.find((r) => r.id === ka.registrantId);
-      const pemanduNames = kelompok
-        ? kelompok.pemanduIds.map((pid) => pemandus.find((p) => p.id === pid)?.fullName || "-").join(" & ")
-        : "-";
-      return {
-        assignmentId: ka.id,
-        kelompokId: ka.kelompokId,
-        kelompokName: kelompok?.name || "-",
-        pemanduNames,
-        registrantId: ka.registrantId,
-        registrantName: reg?.fullName || "-",
-        registrantEmail: reg?.email || "-",
-        registrantYear: reg?.year || "-",
-        registrantMajor: reg?.major || "-",
-      };
-    });
-
-    // Kelompok data with pemandu names
-    const kelompokData = kelompoks.map((k) => {
-      const p1 = pemandus.find((p) => p.id === k.pemanduIds[0]);
-      const p2 = pemandus.find((p) => p.id === k.pemanduIds[1]);
-      const cufoCount = kelompokAssignments.filter((ka) => ka.kelompokId === k.id).length;
-      return {
-        ...k,
-        pemandu1Name: p1?.fullName || "-",
-        pemandu2Name: p2?.fullName || "-",
-        cufoCount,
-      };
-    });
-
-    return { stats, recentActivities, topRegistrants, activityDistribution, pemanduStats, allAssignments, unassigned, registrants, pemandus, kelompokData, kelompoks };
-  }, [refreshTick]);
+  // Get data safely with error handling
+  const data = useMemo(() => safeCompute(local), [refreshTick, local]);
 
   const handleAssign = async () => {
     if (!selectedKelompok || !selectedRegistrant) return;
@@ -319,6 +290,18 @@ export default function AdminDashboard() {
   return (
     <MainLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Banner */}
+        {data.error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-red-800 text-sm">Terjadi kesalahan saat memuat data</p>
+              <p className="text-red-600 text-xs mt-1">{data.error}</p>
+              <p className="text-red-500 text-xs mt-1">Silakan refresh halaman atau hubungi pengembang.</p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">

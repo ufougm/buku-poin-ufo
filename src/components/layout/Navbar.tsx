@@ -141,61 +141,40 @@ export default function Navbar() {
                     <img src="/logo-ufo.png" alt="UFO UGM" className="h-7 w-auto" />
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {/* User info */}
+                  <div className="flex-1 overflow-y-auto py-2">
+                    {/* Auth role badge */}
                     {isAuthenticated && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="font-medium text-sm">{user?.name || "User"}</p>
-                        <p className="text-xs text-gray-500 truncate">{user?.id || ""}</p>
-                        <div className="mt-1.5">
-                          {user?.role === "psdm_pemandu" && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">PSDM + Pemandu</span>}
-                          {user?.role === "psdm" && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">PSDM</span>}
-                          {user?.role === "pemandu" && <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Pemandu</span>}
-                          {isUser && <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">Calon Anggota</span>}
-                        </div>
+                      <div className="mx-4 mb-2 px-3 py-1.5 bg-red-50 rounded-md">
+                        <p className="text-xs font-medium text-red-800 truncate">{user?.name || "User"}</p>
+                        <p className="text-[10px] text-red-500 truncate">{user?.id || ""}</p>
                       </div>
                     )}
 
-                    {/* Main Menu */}
-                    {isAuthenticated && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Menu</p>
-                        <div className="space-y-0.5">
-                          {isUser && (
-                            <>
-                              <MobileNavLink to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                              <MobileNavLink to="/faq-buku-poin" icon={HelpCircle} label="FAQ Buku Poin" />
-                            </>
-                          )}
-                          {isMentor && <MobileNavLink to="/pemandu" icon={Users} label="Pemandu" />}
-                          {isPsdm && <MobileNavLink to="/admin" icon={Shield} label="Panel PSDM" />}
-                        </div>
-                      </div>
-                    )}
+                    {/* Single clean nav list */}
+                    <div className="space-y-0">
+                      {/* Auth pages first */}
+                      {isUser && (
+                        <>
+                          <MobileNavLink to="/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                          <MobileNavLink to="/faq-buku-poin" icon={HelpCircle} label="FAQ Buku Poin" />
+                        </>
+                      )}
+                      {isMentor && <MobileNavLink to="/pemandu" icon={Users} label="Pemandu" />}
+                      {isPsdm && <MobileNavLink to="/admin" icon={Shield} label="Panel PSDM" />}
+                      {isAuthenticated && <MobileNavLink to="/profile" icon={Settings} label="Profil" />}
 
-                    {/* Info */}
-                    <div>
-                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Info</p>
-                      <div className="space-y-0.5">
-                        <MobileNavLink to="/leaderboard" icon={Trophy} label="Peringkat" />
-                        {isLandingPage && (
-                          <>
-                            <button onClick={() => handleNavClick("#about")} className="w-full text-left px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md">Tentang</button>
-                            <button onClick={() => handleNavClick("#gallery")} className="w-full text-left px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md">Galeri</button>
-                          </>
-                        )}
-                      </div>
+                      {/* Divider */}
+                      <div className="my-1 border-t border-gray-100" />
+
+                      {/* Public pages */}
+                      <MobileNavLink to="/leaderboard" icon={Trophy} label="Peringkat" />
+                      {isLandingPage && (
+                        <>
+                          <button onClick={() => handleNavClick("#about")} className="w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"><span className="w-4 text-center text-gray-400 text-xs">#</span>Tentang</button>
+                          <button onClick={() => handleNavClick("#gallery")} className="w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors"><span className="w-4 text-center text-gray-400 text-xs">#</span>Galeri</button>
+                        </>
+                      )}
                     </div>
-
-                    {/* Account */}
-                    {isAuthenticated && (
-                      <div>
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-1">Akun</p>
-                        <div className="space-y-0.5">
-                          <MobileNavLink to="/profile" icon={Settings} label="Profil" />
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   {/* Footer */}

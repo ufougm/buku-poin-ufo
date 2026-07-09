@@ -9,40 +9,46 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import FaqBukuPoin from "./pages/FaqBukuPoin";
 import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
+import SupabaseCheck from "./components/SupabaseCheck";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 export default function App() {
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/leaderboard" element={<Leaderboard />} />
+    <ErrorBoundary>
+      <SupabaseCheck>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
 
-      {/* FAQ - Public Tutorial Page */}
-      <Route path="/faq-buku-poin" element={<FaqBukuPoin />} />
+          {/* FAQ - Public Tutorial Page */}
+          <Route path="/faq-buku-poin" element={<FaqBukuPoin />} />
 
-      {/* Profile - All authenticated users */}
-      <Route element={<ProtectedRoute />}>
-        <Route path="/profile" element={<Profile />} />
-      </Route>
+          {/* Profile - All authenticated users */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/profile" element={<Profile />} />
+          </Route>
 
-      {/* Member Routes */}
-      <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
-        <Route path="/dashboard" element={<MemberDashboard />} />
-      </Route>
+          {/* Member Routes */}
+          <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
+            <Route path="/dashboard" element={<MemberDashboard />} />
+          </Route>
 
-      {/* Pemandu Routes */}
-      <Route element={<ProtectedRoute allowedRoles={["pemandu", "psdm"]} />}>
-        <Route path="/pemandu" element={<PemanduDashboard />} />
-      </Route>
+          {/* Pemandu Routes */}
+          <Route element={<ProtectedRoute allowedRoles={["pemandu", "psdm"]} />}>
+            <Route path="/pemandu" element={<PemanduDashboard />} />
+          </Route>
 
-      {/* PSDM/Admin Routes */}
-      <Route element={<ProtectedRoute allowedRoles={["psdm"]} />}>
-        <Route path="/admin" element={<AdminDashboard />} />
-      </Route>
+          {/* PSDM/Admin Routes */}
+          <Route element={<ProtectedRoute allowedRoles={["psdm"]} />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+          </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </SupabaseCheck>
+    </ErrorBoundary>
   );
 }

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
-import { SYNC_STATUS } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -44,7 +43,6 @@ export default function Navbar() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isLandingPage = location.pathname === "/";
-  const isLocalMode = SYNC_STATUS === "local";
 
   const navLinks = [
     { to: "/leaderboard", label: "Peringkat", icon: Trophy },
@@ -102,13 +100,6 @@ export default function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            {/* Sync mode indicator (PSDM only) */}
-            {isAuthenticated && isLocalMode && (
-              <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-orange-100 text-orange-700 rounded-full border border-orange-200" title="Data hanya tersimpan di perangkat ini. Hubungkan Supabase untuk sinkronisasi antar perangkat.">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                Local Mode
-              </span>
-            )}
             {isAuthenticated ? (
               <>
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full">

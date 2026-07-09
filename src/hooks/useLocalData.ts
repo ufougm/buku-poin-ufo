@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase, IS_LIVE, toCamel } from "@/lib/supabaseClient";
+import { supabase, toCamel } from "@/lib/supabaseClient";
 
 // ─── Types ────────────────────────────────────────────────────────
 export interface LocalRegistrant {
@@ -78,7 +78,7 @@ export interface VerifiedMember {
   role: "pemandu" | "psdm";
 }
 
-// ─── Activity Types (static, never changes) ───────────────────────
+// ─── Activity Types (static reference) ────────────────────────────
 export const ACTIVITY_TYPES = [
   { id: 1, name: "Rapat Koordinasi", category: "Rapat", points: 5, description: "Rapat koordinasi internal" },
   { id: 2, name: "Diklat Dasar Fotografi", category: "Diklat", points: 25, description: "Diklat dasar fotografi (Diksar)" },
@@ -106,72 +106,47 @@ export const ACTIVITY_TYPES = [
   { id: 24, name: "Team Building", category: "Team", points: 10, description: "Kegiatan team building" },
 ];
 
-// ─── localStorage Fallback Helpers ────────────────────────────────
-const LS_PREFIX = "ukm_";
-function lsGet<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(LS_PREFIX + key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch { return fallback; }
-}
-function lsSet(key: string, val: any) {
-  localStorage.setItem(LS_PREFIX + key, JSON.stringify(val));
-}
-let nextId = 100;
-function genId(): number { return nextId++; }
+// ─── Supabase-only CRUD Helpers ───────────────────────────────────
 
-// ─── Supabase CRUD Helpers ────────────────────────────────────────
 async function sbGetMembers(): Promise<LocalMember[]> {
-  if (!IS_LIVE) return lsGet<LocalMember[]>("members", []);
   const { data } = await supabase.from("members").select("*");
   return (data || []).map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
 }
 
 async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
-  if (!IS_LIVE) return lsGet<LocalRegistrant[]>("registrants", []);
   const { data } = await supabase.from("registrants").select("*").order("id", { ascending: true });
   return (data || []).map((r: any) => toCamel(r));
 }
 
 async function sbGetActivities(): Promise<LocalActivity[]> {
-  if (!IS_LIVE) return lsGet<LocalActivity[]>("activities", []);
   const { data } = await supabase.from("activities").select("*").order("id", { ascending: true });
   return (data || []).map((a: any) => toCamel(a));
 }
 
 async function sbGetKelompoks(): Promise<LocalKelompok[]> {
-  if (!IS_LIVE) return lsGet<LocalKelompok[]>("kelompoks", []);
   const { data } = await supabase.from("kelompoks").select("*");
   return (data || []).map((k: any) => toCamel(k));
 }
 
 async function sbGetKelompokAssignments(): Promise<LocalKelompokAssignment[]> {
-  if (!IS_LIVE) return lsGet<LocalKelompokAssignment[]>("kelompokAssignments", []);
   const { data } = await supabase.from("kelompok_assignments").select("*");
   return (data || []).map((ka: any) => toCamel(ka));
 }
 
 async function sbGetPemanduAssignments(): Promise<LocalPemanduAssignment[]> {
-  if (!IS_LIVE) return lsGet<LocalPemanduAssignment[]>("assignments", []);
   const { data } = await supabase.from("pemandu_assignments").select("*");
   return (data || []).map((a: any) => toCamel(a));
 }
 
-async function sbGetFreeUsers(): Promise<any[]> {
-  if (!IS_LIVE) return lsGet<any[]>("free_users", []);
-  const { data } = await supabase.from("free_users").select("*");
-  return (data || []).map((u: any) => toCamel(u));
+async function sbGetLocations(): Promise<string[]> {
+  const { data } = await supabase.from("locations").select("name");
+  if (!data || data.length === 0) return DEFAULT_LOCATIONS;
+  return data.map((d: any) => d.name);
 }
 
 // ─── Write Operations ─────────────────────────────────────────────
 async function sbAddRegistrant(r: Omit<LocalRegistrant, "id" | "createdAt">): Promise<LocalRegistrant> {
   const now = new Date().toISOString();
-  if (!IS_LIVE) {
-    const all = lsGet<LocalRegistrant[]>("registrants", []);
-    const item: LocalRegistrant = { id: genId(), ...r, createdAt: now };
-    lsSet("registrants", [...all, item]);
-    return item;
-  }
   const { data, error } = await supabase.from("registrants").insert([{ ...r, created_at: now }]).select().single();
   if (error) throw error;
   return toCamel(data);
@@ -179,12 +154,6 @@ async function sbAddRegistrant(r: Omit<LocalRegistrant, "id" | "createdAt">): Pr
 
 async function sbAddActivity(a: Omit<LocalActivity, "id" | "submittedAt">): Promise<LocalActivity> {
   const now = new Date().toISOString();
-  if (!IS_LIVE) {
-    const all = lsGet<LocalActivity[]>("activities", []);
-    const item: LocalActivity = { id: genId(), ...a, submittedAt: now };
-    lsSet("activities", [...all, item]);
-    return item;
-  }
   const payload = {
     registrant_id: a.registrantId,
     activity_type_id: a.activityTypeId,
@@ -204,26 +173,16 @@ async function sbAddActivity(a: Omit<LocalActivity, "id" | "submittedAt">): Prom
 }
 
 async function sbUpdateActivity(id: number, updates: Partial<LocalActivity>) {
-  if (!IS_LIVE) {
-    const all = lsGet<LocalActivity[]>("activities", []);
-    const updated = all.map((a) => a.id === id ? { ...a, ...updates } : a);
-    lsSet("activities", updated);
-    return;
-  }
   const payload: any = {};
   if (updates.status !== undefined) payload.status = updates.status;
   if (updates.verifiedBy !== undefined) payload.verified_by = updates.verifiedBy;
   if (updates.verifiedAt !== undefined) payload.verified_at = updates.verifiedAt;
   if (updates.notes !== undefined) payload.notes = updates.notes;
-  await supabase.from("activities").update(payload).eq("id", id);
+  const { error } = await supabase.from("activities").update(payload).eq("id", id);
+  if (error) throw error;
 }
 
 async function sbDeleteRegistrant(id: number) {
-  if (!IS_LIVE) {
-    lsSet("registrants", lsGet<LocalRegistrant[]>("registrants", []).filter((r) => r.id !== id));
-    lsSet("activities", lsGet<LocalActivity[]>("activities", []).filter((a) => a.registrantId !== id));
-    return;
-  }
   await supabase.from("registrants").delete().eq("id", id);
   await supabase.from("activities").delete().eq("registrant_id", id);
   await supabase.from("kelompok_assignments").delete().eq("registrant_id", id);
@@ -232,85 +191,61 @@ async function sbDeleteRegistrant(id: number) {
 
 async function sbAssignToKelompok(registrantId: number, kelompokId: number) {
   const now = new Date().toISOString();
-  if (!IS_LIVE) {
-    // Remove old
-    const kas = lsGet<LocalKelompokAssignment[]>("kelompokAssignments", []).filter((a) => a.registrantId !== registrantId);
-    const pas = lsGet<LocalPemanduAssignment[]>("assignments", []).filter((a) => a.registrantId !== registrantId);
-    // Add new kelompok assignment
-    const newKa: LocalKelompokAssignment = { id: genId(), kelompokId, registrantId, assignedAt: now };
-    lsSet("kelompokAssignments", [...kas, newKa]);
-    // Add pemandu assignments from kelompok
-    const kelompoks = lsGet<LocalKelompok[]>("kelompoks", []);
-    const k = kelompoks.find((kk) => kk.id === kelompokId);
-    if (k) {
-      const newPas = k.pemanduIds.map((pid) => ({ id: genId(), pemanduId: pid, registrantId, assignedAt: now }));
-      lsSet("assignments", [...pas, ...newPas]);
-    }
-    return;
-  }
-  // Remove old assignments
   await supabase.from("kelompok_assignments").delete().eq("registrant_id", registrantId);
   await supabase.from("pemandu_assignments").delete().eq("registrant_id", registrantId);
-  // Add new kelompok assignment
   await supabase.from("kelompok_assignments").insert([{ kelompok_id: kelompokId, registrant_id: registrantId, assigned_at: now }]);
-  // Get kelompok pemandus and add assignments
   const { data: kData } = await supabase.from("kelompoks").select("pemandu_ids").eq("id", kelompokId).single();
   if (kData?.pemandu_ids) {
-    const newPas = kData.pemandu_ids.map((pid: number) => ({
-      pemandu_id: pid,
-      registrant_id: registrantId,
-      assigned_at: now,
-    }));
+    const newPas = kData.pemandu_ids.map((pid: number) => ({ pemandu_id: pid, registrant_id: registrantId, assigned_at: now }));
     await supabase.from("pemandu_assignments").insert(newPas);
   }
 }
 
 async function sbRemoveFromKelompok(registrantId: number) {
-  if (!IS_LIVE) {
-    lsSet("kelompokAssignments", lsGet<LocalKelompokAssignment[]>("kelompokAssignments", []).filter((a) => a.registrantId !== registrantId));
-    lsSet("assignments", lsGet<LocalPemanduAssignment[]>("assignments", []).filter((a) => a.registrantId !== registrantId));
-    return;
-  }
   await supabase.from("kelompok_assignments").delete().eq("registrant_id", registrantId);
   await supabase.from("pemandu_assignments").delete().eq("registrant_id", registrantId);
 }
 
 async function sbAddKelompok(k: Omit<LocalKelompok, "id">): Promise<LocalKelompok> {
-  if (!IS_LIVE) {
-    const all = lsGet<LocalKelompok[]>("kelompoks", []);
-    const item: LocalKelompok = { id: genId(), ...k };
-    lsSet("kelompoks", [...all, item]);
-    return item;
-  }
   const { data, error } = await supabase.from("kelompoks").insert([{ name: k.name, pemandu_ids: k.pemanduIds }]).select().single();
   if (error) throw error;
   return toCamel(data);
 }
 
 async function sbUpdateKelompok(id: number, updates: Partial<LocalKelompok>) {
-  if (!IS_LIVE) {
-    const all = lsGet<LocalKelompok[]>("kelompoks", []);
-    lsSet("kelompoks", all.map((k) => k.id === id ? { ...k, ...updates } : k));
-    return;
-  }
   const payload: any = {};
   if (updates.name !== undefined) payload.name = updates.name;
   if (updates.pemanduIds !== undefined) payload.pemandu_ids = updates.pemanduIds;
-  await supabase.from("kelompoks").update(payload).eq("id", id);
+  const { error } = await supabase.from("kelompoks").update(payload).eq("id", id);
+  if (error) throw error;
 }
 
 async function sbDeleteKelompok(id: number) {
-  if (!IS_LIVE) {
-    lsSet("kelompoks", lsGet<LocalKelompok[]>("kelompoks", []).filter((k) => k.id !== id));
-    lsSet("kelompokAssignments", lsGet<LocalKelompokAssignment[]>("kelompokAssignments", []).filter((a) => a.kelompokId !== id));
-    return;
-  }
   await supabase.from("kelompok_assignments").delete().eq("kelompok_id", id);
   await supabase.from("pemandu_assignments").delete().eq("kelompok_id", id);
   await supabase.from("kelompoks").delete().eq("id", id);
 }
 
-// ─── Standalone Pemandu CRUD (admin-managed, separate from members) ──
+async function sbAddMember(m: Omit<LocalMember, "isPreRegistered">): Promise<void> {
+  await supabase.from("members").insert([{ nsa: m.nsa, name: m.name, angkatan: m.angkatan, divisi: m.divisi, role: m.role, password: m.password, email: m.email }]);
+}
+
+async function sbUpdateMember(nsa: string, updates: Partial<LocalMember>) {
+  const payload: any = {};
+  if (updates.password !== undefined) payload.password = updates.password;
+  if (updates.email !== undefined) payload.email = updates.email;
+  await supabase.from("members").update(payload).eq("nsa", nsa);
+}
+
+async function sbAddLocation(name: string) {
+  await supabase.from("locations").insert([{ name }]).select();
+}
+
+async function sbDeleteLocation(name: string) {
+  await supabase.from("locations").delete().eq("name", name);
+}
+
+// ─── Standalone Pemandu CRUD (admin-managed pemandus not in members) ──
 interface StandalonePemandu {
   id: number;
   fullName: string;
@@ -319,114 +254,65 @@ interface StandalonePemandu {
   maxMentees: number;
   createdAt: string;
 }
-function getStandalonePemandus(): StandalonePemandu[] {
-  return lsGet<StandalonePemandu[]>("standalone_pemandus", []);
-}
-function setStandalonePemandus(list: StandalonePemandu[]) {
-  lsSet("standalone_pemandus", list);
-}
+
 export async function addPemandu(data: { userId: number; fullName: string; email: string; expertise: string; maxMentees: number }) {
-  const item: StandalonePemandu = { id: genId(), fullName: data.fullName, email: data.email, expertise: data.expertise, maxMentees: data.maxMentees, createdAt: new Date().toISOString() };
-  setStandalonePemandus([...getStandalonePemandus(), item]);
+  const { error } = await supabase.from("standalone_pemandus").insert([{
+    full_name: data.fullName,
+    email: data.email,
+    expertise: data.expertise,
+    max_mentees: data.maxMentees,
+    created_at: new Date().toISOString(),
+  }]);
+  if (error) throw error;
 }
+
 export async function updatePemandu(id: number, updates: Partial<StandalonePemandu>) {
-  setStandalonePemandus(getStandalonePemandus().map((p) => p.id === id ? { ...p, ...updates } : p));
-}
-export async function deletePemandu(id: number) {
-  setStandalonePemandus(getStandalonePemandus().filter((p) => p.id !== id));
-}
-
-// ─── Verified Member CRUD (admin-managed overrides to PRE_REGISTERED) ──
-function getVerifiedMemberOverrides(): { added: LocalMember[]; removed: string[] } {
-  return lsGet("verified_overrides", { added: [], removed: [] });
-}
-function setVerifiedMemberOverrides(o: { added: LocalMember[]; removed: string[] }) {
-  lsSet("verified_overrides", o);
-}
-export function getVerifiedMembers(): LocalMember[] {
-  const overrides = getVerifiedMemberOverrides();
-  const base = getMembers();
-  const withRemoved = base.filter((m) => !overrides.removed.includes(m.nsa));
-  return [...withRemoved, ...overrides.added];
-}
-export async function addVerifiedMember(data: { serialNumber: string; fullName: string; email: string; role: "pemandu" | "psdm" }) {
-  const all = getMembers();
-  if (all.some((m) => m.nsa === data.serialNumber)) throw new Error("Nomor seri sudah terdaftar");
-  const overrides = getVerifiedMemberOverrides();
-  const newMember: LocalMember = { nsa: data.serialNumber, name: data.fullName, angkatan: 0, divisi: "", role: data.role, password: "123456", email: data.email, isPreRegistered: true };
-  overrides.added.push(newMember);
-  setVerifiedMemberOverrides(overrides);
-  // Also add to members list
-  lsSet("members", [...all, newMember]);
-}
-export async function updateVerifiedMember(serialNumber: string, updates: { serialNumber: string; fullName: string; email: string; role: "pemandu" | "psdm" }) {
-  // Update in members list
-  const all = getMembers();
-  const updated = all.map((m) => m.nsa === serialNumber ? { ...m, nsa: updates.serialNumber, name: updates.fullName, email: updates.email, role: updates.role } : m);
-  lsSet("members", updated);
-  // Update in overrides if it's an added member
-  const overrides = getVerifiedMemberOverrides();
-  overrides.added = overrides.added.map((m) => m.nsa === serialNumber ? { ...m, nsa: updates.serialNumber, name: updates.fullName, email: updates.email, role: updates.role } : m);
-  setVerifiedMemberOverrides(overrides);
-}
-export async function deleteVerifiedMember(serialNumber: string) {
-  const overrides = getVerifiedMemberOverrides();
-  overrides.removed.push(serialNumber);
-  overrides.added = overrides.added.filter((m) => m.nsa !== serialNumber);
-  setVerifiedMemberOverrides(overrides);
-  // Also remove from members list
-  const all = getMembers();
-  lsSet("members", all.filter((m) => m.nsa !== serialNumber));
-}
-
-async function sbAddMember(m: Omit<LocalMember, "isPreRegistered">): Promise<void> {
-  if (!IS_LIVE) {
-    const all = lsGet<LocalMember[]>("members", []);
-    lsSet("members", [...all, { ...m, isPreRegistered: true }]);
-    return;
-  }
-  await supabase.from("members").insert([{ nsa: m.nsa, name: m.name, angkatan: m.angkatan, divisi: m.divisi, role: m.role, password: m.password, email: m.email }]);
-}
-
-async function sbUpdateMember(nsa: string, updates: Partial<LocalMember>) {
-  if (!IS_LIVE) {
-    const all = lsGet<LocalMember[]>("members", []);
-    lsSet("members", all.map((m) => m.nsa === nsa ? { ...m, ...updates } : m));
-    return;
-  }
   const payload: any = {};
-  if (updates.password !== undefined) payload.password = updates.password;
+  if (updates.fullName !== undefined) payload.full_name = updates.fullName;
   if (updates.email !== undefined) payload.email = updates.email;
-  await supabase.from("members").update(payload).eq("nsa", nsa);
+  if (updates.expertise !== undefined) payload.expertise = updates.expertise;
+  if (updates.maxMentees !== undefined) payload.max_mentees = updates.maxMentees;
+  const { error } = await supabase.from("standalone_pemandus").update(payload).eq("id", id);
+  if (error) throw error;
 }
 
-async function sbAddLocation(name: string) {
-  if (!IS_LIVE) {
-    const all = lsGet<string[]>("locations", DEFAULT_LOCATIONS);
-    if (!all.includes(name)) lsSet("locations", [...all, name]);
-    return;
-  }
-  await supabase.from("locations").insert([{ name }]).select();
+export async function deletePemandu(id: number) {
+  const { error } = await supabase.from("standalone_pemandus").delete().eq("id", id);
+  if (error) throw error;
 }
 
-async function sbDeleteLocation(name: string) {
-  if (!IS_LIVE) {
-    lsSet("locations", lsGet<string[]>("locations", DEFAULT_LOCATIONS).filter((l) => l !== name));
-    return;
-  }
-  await supabase.from("locations").delete().eq("name", name);
+// ─── Verified Member CRUD ─────────────────────────────────────────
+export async function addVerifiedMember(data: { serialNumber: string; fullName: string; email: string; role: "pemandu" | "psdm" }) {
+  const { data: existing } = await supabase.from("members").select("nsa").eq("nsa", data.serialNumber).single();
+  if (existing) throw new Error("Nomor seri sudah terdaftar");
+  const { error } = await supabase.from("members").insert([{
+    nsa: data.serialNumber,
+    name: data.fullName,
+    angkatan: 0,
+    divisi: "",
+    role: data.role,
+    password: "123456",
+    email: data.email,
+  }]);
+  if (error) throw error;
 }
 
-async function sbGetLocations(): Promise<string[]> {
-  if (!IS_LIVE) return lsGet<string[]>("locations", DEFAULT_LOCATIONS);
-  const { data } = await supabase.from("locations").select("name");
-  if (!data || data.length === 0) return DEFAULT_LOCATIONS;
-  return data.map((d: any) => d.name);
+export async function updateVerifiedMember(serialNumber: string, updates: { serialNumber: string; fullName: string; email: string; role: "pemandu" | "psdm" }) {
+  const { error } = await supabase.from("members").update({
+    nsa: updates.serialNumber,
+    name: updates.fullName,
+    email: updates.email,
+    role: updates.role,
+  }).eq("nsa", serialNumber);
+  if (error) throw error;
+}
+
+export async function deleteVerifiedMember(serialNumber: string) {
+  const { error } = await supabase.from("members").delete().eq("nsa", serialNumber);
+  if (error) throw error;
 }
 
 // ─── Seed Members ─────────────────────────────────────────────────
-const PSDM_PIN = "UFOADMIN2024";
-
 export const PRE_REGISTERED_MEMBERS: Omit<LocalMember, "isPreRegistered">[] = [
   { nsa: "NSA.3224.018.1089", name: "MUHAMMAD NAUFAL HAFIZH", angkatan: 32, divisi: "Wakil Ketua", role: "psdm", password: "1089" },
   { nsa: "NSA.3224.027.1098", name: "NAUFAL REZA AL LUTHFI", angkatan: 32, divisi: "Ketua", role: "psdm", password: "1098" },
@@ -467,13 +353,15 @@ export const PRE_REGISTERED_MEMBERS: Omit<LocalMember, "isPreRegistered">[] = [
 ];
 
 const DEFAULT_LOCATIONS = [
-  "Sekretariat UFO UGM","Sekretariat Bersama N58 UGM","Auditorium FMIPA UGM",
-  "Grha Sabha Pramana UGM","Balairung UGM","Perpustakaan Pusat UGM",
-  "Museum UGM","Taman Budaya Yogyakarta","Jogja National Museum",
-  "Galeri Nasional Indonesia Yogyakarta","Taman Sari Yogyakarta",
-  "Candi Prambanan","Candi Borobudur","Malioboro",
-  "Taman Pelangi Jogja","Lapangan Pancasila UGM","Gelanggang Mahasiswa UGM",
+  "Sekretariat UFO UGM", "Sekretariat Bersama N58 UGM", "Auditorium FMIPA UGM",
+  "Grha Sabha Pramana UGM", "Balairung UGM", "Perpustakaan Pusat UGM",
+  "Museum UGM", "Taman Budaya Yogyakarta", "Jogja National Museum",
+  "Galeri Nasional Indonesia Yogyakarta", "Taman Sari Yogyakarta",
+  "Candi Prambanan", "Candi Borobudur", "Malioboro",
+  "Taman Pelangi Jogja", "Lapangan Pancasila UGM", "Gelanggang Mahasiswa UGM",
 ];
+
+const PSDM_PIN = "UFOADMIN2024";
 
 // ─── Exported Functions ───────────────────────────────────────────
 export function verifyMember(serialNumber: string, role: "pemandu" | "psdm", pin?: string): VerifiedMember | null {
@@ -496,7 +384,7 @@ export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & 
   return members
     .filter((m) => m.role === "pemandu" || m.role === "psdm_pemandu")
     .map((m) => ({
-      id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || genId(),
+      id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || 0,
       userId: 0,
       fullName: m.name,
       email: m.email || m.nsa,
@@ -507,35 +395,36 @@ export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & 
     }));
 }
 
-export function updateMember(nsa: string, updates: Partial<LocalMember>) {
-  const all = getMembers();
-  lsSet("members", all.map((m) => m.nsa === nsa ? { ...m, ...updates } : m));
+export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
+  await sbUpdateMember(nsa, updates);
 }
 
 export function getLocations(): string[] {
-  return lsGet<string[]>("locations", DEFAULT_LOCATIONS);
+  return DEFAULT_LOCATIONS;
 }
 
-export function getMembers(): LocalMember[] {
-  return lsGet<LocalMember[]>("members", []);
+export async function getMembers(): Promise<LocalMember[]> {
+  return sbGetMembers();
 }
 
-export function getMemberByNSA(nsa: string): LocalMember | undefined {
-  return getMembers().find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
+export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefined> {
+  const { data } = await supabase.from("members").select("*").eq("nsa", nsa).single();
+  return data ? { ...toCamel(data), isPreRegistered: true } : undefined;
 }
 
-export function seedMembers() {
-  const existing = getMembers();
-  if (existing.length > 0) return;
-  const members: LocalMember[] = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
-  lsSet("members", members);
+export async function seedMembers() {
+  const { count } = await supabase.from("members").select("*", { count: "exact", head: true });
+  if (count && count > 0) return;
+  for (const m of PRE_REGISTERED_MEMBERS) {
+    await sbAddMember(m);
+  }
 }
 
 export function getPsdmMembers(members: LocalMember[]): LocalPemandu[] {
   return members
     .filter((m) => m.role === "psdm" || m.role === "psdm_pemandu")
     .map((m) => ({
-      id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || genId(),
+      id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || 0,
       userId: 0,
       fullName: m.name,
       email: m.email || m.nsa,
@@ -548,7 +437,6 @@ export function getPsdmMembers(members: LocalMember[]): LocalPemandu[] {
 // ─── Main React Hook ──────────────────────────────────────────────
 export function useLocalData() {
   const [version, setVersion] = useState(0);
-
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
   // Data states
@@ -559,12 +447,13 @@ export function useLocalData() {
   const [kelompokAssignments, setKelompokAssignments] = useState<LocalKelompokAssignment[]>([]);
   const [pemanduAssignments, setPemanduAssignments] = useState<LocalPemanduAssignment[]>([]);
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
+  const [standalonePemandus, setStandalonePemandus] = useState<StandalonePemandu[]>([]);
 
-  // Load all data from Supabase (or localStorage fallback)
+  // Load all data from Supabase
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [m, r, a, k, ka, pa, l] = await Promise.all([
+      const [m, r, a, k, ka, pa, l, sp] = await Promise.all([
         sbGetMembers(),
         sbGetRegistrants(),
         sbGetActivities(),
@@ -572,6 +461,7 @@ export function useLocalData() {
         sbGetKelompokAssignments(),
         sbGetPemanduAssignments(),
         sbGetLocations(),
+        supabase.from("standalone_pemandus").select("*").then(({ data }) => (data || []).map(toCamel)),
       ]);
       if (cancelled) return;
       setMembers(m);
@@ -581,6 +471,7 @@ export function useLocalData() {
       setKelompokAssignments(ka);
       setPemanduAssignments(pa);
       setLocations(l);
+      setStandalonePemandus(sp);
     }
     load();
     return () => { cancelled = true; };
@@ -589,13 +480,7 @@ export function useLocalData() {
   // Seed members if empty
   useEffect(() => {
     if (members.length === 0) {
-      (async () => {
-        // Try to seed from pre-registered list
-        for (const member of PRE_REGISTERED_MEMBERS) {
-          await sbAddMember(member);
-        }
-        refresh();
-      })();
+      seedMembers().then(() => refresh());
     }
   }, [members.length]);
 
@@ -648,11 +533,6 @@ export function useLocalData() {
     refresh();
   };
 
-  const updateMember = async (nsa: string, updates: Partial<LocalMember>) => {
-    await sbUpdateMember(nsa, updates);
-    refresh();
-  };
-
   const addLocation = async (name: string) => {
     await sbAddLocation(name);
     refresh();
@@ -664,10 +544,11 @@ export function useLocalData() {
   };
 
   // ─── Queries ────────────────────────────────────────────────────
+  const memberPemandus = getPemandusFromMembers(members);
+  const allPemandus = [...memberPemandus, ...standalonePemandus.map((p) => ({ ...p, status: "active" as const, userId: 0 }))];
+
   const getRegistrantByEmail = (email: string) => registrants.find((r) => r.email.toLowerCase() === email.toLowerCase());
   const getRegistrantById = (id: number) => registrants.find((r) => r.id === id);
-  const getMemberByNSA = (nsa: string) => members.find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
-  const allPemandus = [...getPemandusFromMembers(members), ...getStandalonePemandus().map((p) => ({ ...p, status: "active" as const, userId: 0 }))];
   const getPemanduById = (id: number) => allPemandus.find((p) => p.id === id);
   const getKelompokForRegistrant = (registrantId: number) => kelompoks.find((k) => kelompokAssignments.some((ka) => ka.registrantId === registrantId && ka.kelompokId === k.id));
   const getPemandusForRegistrant = (registrantId: number) => {
@@ -676,11 +557,10 @@ export function useLocalData() {
     return allPemandus.filter((p) => k.pemanduIds.includes(p.id));
   };
   const getKelompokNameForRegistrant = (registrantId: number) => getKelompokForRegistrant(registrantId)?.name || "Belum ditugaskan";
+  const getActivitiesByRegistrant = (registrantId: number) => activities.filter((a) => a.registrantId === registrantId);
   const getCUFOByPemandu = (pemanduId: number) => {
-    // Find kelompoks where this pemandu is assigned
     const pemanduKelompoks = kelompoks.filter((k) => k.pemanduIds.includes(pemanduId));
     const kelompokIds = pemanduKelompoks.map((k) => k.id);
-    // Find all registrants in those kelompoks
     return kelompokAssignments
       .filter((ka) => kelompokIds.includes(ka.kelompokId))
       .map((ka) => {
@@ -689,7 +569,6 @@ export function useLocalData() {
       })
       .filter(Boolean);
   };
-  const getActivitiesByRegistrant = (registrantId: number) => activities.filter((a) => a.registrantId === registrantId);
   const getPointSummary = (registrantId: number) => {
     const acts = getActivitiesByRegistrant(registrantId);
     return {
@@ -708,7 +587,7 @@ export function useLocalData() {
     registrants,
     activities,
     members,
-    pemandus: [...getPemandusFromMembers(members), ...getStandalonePemandus().map((p) => ({ ...p, status: "active" as const, userId: 0 }))],
+    pemandus: allPemandus,
     kelompoks,
     kelompokAssignments,
     pemanduAssignments,
@@ -725,7 +604,6 @@ export function useLocalData() {
     addKelompok,
     updateKelompok,
     deleteKelompok,
-    updateMember,
     addLocation,
     deleteLocation,
     // Pemandu CRUD
@@ -739,7 +617,7 @@ export function useLocalData() {
     // Queries
     getRegistrantByEmail,
     getRegistrantById,
-    getMemberByNSA,
+    getMemberByNSA: getMemberByNSA,
     getPemanduById,
     getKelompokForRegistrant,
     getPemandusForRegistrant,

@@ -3,21 +3,18 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
-export const IS_LIVE = !!(supabaseUrl && supabaseAnonKey && supabaseUrl.startsWith("https://"));
-export const SYNC_STATUS = IS_LIVE ? "live" as const : "local" as const;
-
-// Create a dummy client when not configured (localStorage fallback mode)
-let client: any;
-try {
-  client = IS_LIVE
-    ? createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } })
-    : { from: () => ({ select: () => ({ data: null }), insert: () => ({ data: null, error: null }), update: () => ({ error: null }), delete: () => ({ error: null }) }) };
-} catch {
-  client = { from: () => ({ select: () => ({ data: null }), insert: () => ({ data: null, error: null }), update: () => ({ error: null }), delete: () => ({ error: null }) }) };
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    "[Buku Poin UFO] Supabase not configured. " +
+    "Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables."
+  );
 }
-export const supabase = client;
 
-// Types for Supabase tables
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: { persistSession: false },
+});
+
+// ─── Types for Supabase tables ────────────────────────────────────
 export interface DbMember {
   nsa: string;
   name: string;
@@ -25,6 +22,7 @@ export interface DbMember {
   divisi: string;
   role: string;
   password: string;
+  email?: string;
   created_at?: string;
 }
 
@@ -35,7 +33,6 @@ export interface DbRegistrant {
   year: string;
   major: string;
   status: string;
-  created_by: string;
   created_at?: string;
 }
 
@@ -54,7 +51,7 @@ export interface DbActivity {
   verified_by?: string;
   verified_at?: string;
   notes?: string;
-  created_at?: string;
+  submitted_at?: string;
 }
 
 export interface DbKelompok {
@@ -67,6 +64,13 @@ export interface DbKelompok {
 export interface DbKelompokAssignment {
   id: number;
   kelompok_id: number;
+  registrant_id: number;
+  assigned_at?: string;
+}
+
+export interface DbPemanduAssignment {
+  id: number;
+  pemandu_id: number;
   registrant_id: number;
   assigned_at?: string;
 }

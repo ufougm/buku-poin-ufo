@@ -6,12 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogIn, UserPlus, ArrowLeft, Loader2, ShieldCheck, Users, User } from "lucide-react";
 import { Link } from "react-router";
-import { getMembers, seedMembers, getMemberByNSA } from "@/hooks/useLocalData";
+import { seedMembers, getMemberByNSA } from "@/hooks/useLocalData";
+import { supabase } from "@/lib/supabaseClient";
 
-// ─── Stored Users Management ──────────────────────────────────────
-// Users who signed up freely (not pre-registered via NSA)
-const FREE_USERS_KEY = "ukm_free_users";
-
+// ─── Free Users (Supabase-backed) ─────────────────────────────────
 interface FreeUser {
   username: string;
   name: string;
@@ -21,23 +19,21 @@ interface FreeUser {
   createdAt: string;
 }
 
-function getFreeUsers(): FreeUser[] {
-  try {
-    const raw = localStorage.getItem(FREE_USERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+async function findFreeUserByUsername(username: string): Promise<FreeUser | undefined> {
+  const { data } = await supabase.from("free_users").select("*").eq("username", username).single();
+  if (!data) return undefined;
+  return { username: data.username, name: data.name, email: data.email, password: data.password, role: data.role, createdAt: data.created_at };
 }
 
-function saveFreeUser(user: FreeUser) {
-  const users = getFreeUsers();
-  users.push(user);
-  localStorage.setItem(FREE_USERS_KEY, JSON.stringify(users));
-}
-
-function findFreeUserByUsername(username: string): FreeUser | undefined {
-  return getFreeUsers().find((u) => u.username.toLowerCase() === username.toLowerCase());
+async function saveFreeUser(user: FreeUser) {
+  await supabase.from("free_users").insert([{
+    username: user.username,
+    name: user.name,
+    email: user.email,
+    password: user.password,
+    role: user.role,
+    created_at: user.createdAt,
+  }]);
 }
 
 // ─── Session Management ───────────────────────────────────────────
@@ -78,7 +74,7 @@ export default function Login() {
   const [error, setError] = useState("");
 
   // ─── Login handler ──────────────────────────────────────────────
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -88,7 +84,7 @@ export default function Login() {
     }
 
     // Try 1: Pre-registered member by NSA
-    const member = getMemberByNSA(username.trim());
+    const member = await getMemberByNSA(username.trim());
     if (member) {
       if (member.password !== password) {
         setError("Password salah.");
@@ -107,7 +103,7 @@ export default function Login() {
     }
 
     // Try 2: Free signup user by username
-    const freeUser = findFreeUserByUsername(username.trim());
+    const freeUser = await findFreeUserByUsername(username.trim());
     if (freeUser) {
       if (freeUser.password !== password) {
         setError("Password salah.");
@@ -128,7 +124,7 @@ export default function Login() {
   };
 
   // ─── Register handler ───────────────────────────────────────────
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -138,13 +134,15 @@ export default function Login() {
     if (password.length < 4) { setError("Password minimal 4 karakter"); return; }
 
     // Check if username conflicts with existing NSA
-    if (getMemberByNSA(username.trim())) {
+    const existingMember = await getMemberByNSA(username.trim());
+    if (existingMember) {
       setError("Username sudah terdaftar sebagai Nomor Seri Anggota. Gunakan NSA Anda untuk masuk.");
       return;
     }
 
     // Check if username already taken by free user
-    if (findFreeUserByUsername(username.trim())) {
+    const existingFree = await findFreeUserByUsername(username.trim());
+    if (existingFree) {
       setError("Username sudah digunakan. Silakan pilih username lain.");
       return;
     }

@@ -151,7 +151,8 @@ export default function AdminDashboard() {
 
   // Google Sheets sync state
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "done" | "error">("idle");
-  const [syncResult, setSyncResult] = useState<{ added: number; skipped: number; errors: number } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ added: number; skipped: number; errors: number; details: string[]; fetchedCount: number } | null>(null);
+  const [showSyncLogs, setShowSyncLogs] = useState(false);
 
   // Get data safely with error handling
   const data = useMemo(() => safeCompute(local), [refreshTick, local]);
@@ -173,16 +174,11 @@ export default function AdminDashboard() {
   const handleSyncSheets = async () => {
     setSyncStatus("syncing");
     setSyncResult(null);
-    try {
-      const result = await syncRegistrantsFromSheet();
-      setSyncResult(result);
-      setSyncStatus("done");
-      refreshData(); // refresh registrants list
-    } catch (e: any) {
-      console.error("[handleSyncSheets]", e);
-      setSyncStatus("error");
-      setSyncResult({ added: 0, skipped: 0, errors: 1 });
-    }
+    setShowSyncLogs(false);
+    const result = await syncRegistrantsFromSheet();
+    setSyncResult(result);
+    setSyncStatus(result.errors > 0 ? "error" : "done");
+    if (result.added > 0) refreshData();
   };
 
   // ─── Data Management Handlers ────────────────────────────────────
@@ -376,7 +372,7 @@ export default function AdminDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
                   <Button
                     onClick={handleSyncSheets}
                     disabled={syncStatus === "syncing"}
@@ -391,17 +387,58 @@ export default function AdminDashboard() {
                   </Button>
                   {syncStatus === "done" && syncResult && (
                     <span className="text-sm text-green-700 bg-green-100 px-3 py-1 rounded-full">
-                      {syncResult.added} ditambahkan, {syncResult.skipped} dilewati
+                      {syncResult.fetchedCount} dibaca, {syncResult.added} ditambahkan, {syncResult.skipped} dilewati
                     </span>
                   )}
-                  {syncStatus === "error" && (
+                  {syncStatus === "error" && syncResult && (
                     <span className="text-sm text-red-700 bg-red-100 px-3 py-1 rounded-full">
-                      Gagal sinkron. Periksa koneksi dan URL spreadsheet.
+                      {syncResult.fetchedCount} dibaca, {syncResult.errors} error
                     </span>
+                  )}
+                  {syncResult && syncResult.details.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowSyncLogs((v) => !v)}
+                      className="text-xs text-gray-500"
+                    >
+                      {showSyncLogs ? "Sembunyikan Log" : "Lihat Log"}
+                    </Button>
                   )}
                 </div>
-                {syncResult && syncResult.errors > 0 && (
-                  <p className="text-xs text-red-600 mt-2">{syncResult.errors} error terjadi saat sinkronisasi.</p>
+                {/* Detailed Logs */}
+                {showSyncLogs && syncResult && (
+                  <div className="mt-3 p-3 bg-gray-900 rounded-lg max-h-60 overflow-y-auto">
+                    <div className="font-mono text-xs space-y-0.5">
+                      {syncResult.details.map((log, i) => (
+                        <div
+                          key={i}
+                          className={
+                            log.startsWith("Error") || log.startsWith("Insert error") || log.startsWith("Fetch error")
+                              ? "text-red-400"
+                              : log.startsWith("Berhasil") || log.includes("ditambahkan")
+                              ? "text-green-400"
+                              : log.startsWith("Selesai")
+                              ? "text-yellow-400 font-bold"
+                              : "text-gray-400"
+                          }
+                        >
+                          {log}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Quick error hint */}
+                {syncStatus === "error" && syncResult && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-xs text-red-700 font-medium">Troubleshooting:</p>
+                    <ul className="text-xs text-red-600 mt-1 list-disc list-inside space-y-0.5">
+                      <li>Pastikan spreadsheet diatur ke "Siapa saja yang memiliki link dapat melihat"</li>
+                      <li>Pastikan kolom registrants di Supabase sudah ada (jalankan schema SQL)</li>
+                      <li>Klik "Lihat Log" di atas untuk detail error</li>
+                    </ul>
+                  </div>
                 )}
               </CardContent>
             </Card>

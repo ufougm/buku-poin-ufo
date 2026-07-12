@@ -109,39 +109,53 @@ export const ACTIVITY_TYPES = [
 // ─── Supabase-only CRUD Helpers ───────────────────────────────────
 
 async function sbGetMembers(): Promise<LocalMember[]> {
-  const { data } = await supabase.from("members").select("*");
-  return (data || []).map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
+  try {
+    const { data } = await supabase.from("members").select("*");
+    return (data || []).map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
+  } catch { return []; }
 }
 
 async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
-  const { data } = await supabase.from("registrants").select("*").order("id", { ascending: true });
-  return (data || []).map((r: any) => toCamel(r));
+  try {
+    const { data } = await supabase.from("registrants").select("*").order("id", { ascending: true });
+    return (data || []).map((r: any) => toCamel(r));
+  } catch { return []; }
 }
 
 async function sbGetActivities(): Promise<LocalActivity[]> {
-  const { data } = await supabase.from("activities").select("*").order("id", { ascending: true });
-  return (data || []).map((a: any) => toCamel(a));
+  try {
+    const { data } = await supabase.from("activities").select("*").order("id", { ascending: true });
+    return (data || []).map((a: any) => toCamel(a));
+  } catch { return []; }
 }
 
 async function sbGetKelompoks(): Promise<LocalKelompok[]> {
-  const { data } = await supabase.from("kelompoks").select("*");
-  return (data || []).map((k: any) => toCamel(k));
+  try {
+    const { data } = await supabase.from("kelompoks").select("*");
+    return (data || []).map((k: any) => toCamel(k));
+  } catch { return []; }
 }
 
 async function sbGetKelompokAssignments(): Promise<LocalKelompokAssignment[]> {
-  const { data } = await supabase.from("kelompok_assignments").select("*");
-  return (data || []).map((ka: any) => toCamel(ka));
+  try {
+    const { data } = await supabase.from("kelompok_assignments").select("*");
+    return (data || []).map((ka: any) => toCamel(ka));
+  } catch { return []; }
 }
 
 async function sbGetPemanduAssignments(): Promise<LocalPemanduAssignment[]> {
-  const { data } = await supabase.from("pemandu_assignments").select("*");
-  return (data || []).map((a: any) => toCamel(a));
+  try {
+    const { data } = await supabase.from("pemandu_assignments").select("*");
+    return (data || []).map((a: any) => toCamel(a));
+  } catch { return []; }
 }
 
 async function sbGetLocations(): Promise<string[]> {
-  const { data } = await supabase.from("locations").select("name");
-  if (!data || data.length === 0) return DEFAULT_LOCATIONS;
-  return data.map((d: any) => d.name);
+  try {
+    const { data } = await supabase.from("locations").select("name");
+    if (!data || data.length === 0) return DEFAULT_LOCATIONS;
+    return data.map((d: any) => d.name);
+  } catch { return DEFAULT_LOCATIONS; }
 }
 
 // ─── Write Operations ─────────────────────────────────────────────
@@ -408,15 +422,21 @@ export async function getMembers(): Promise<LocalMember[]> {
 }
 
 export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefined> {
-  const { data } = await supabase.from("members").select("*").eq("nsa", nsa).single();
-  return data ? { ...toCamel(data), isPreRegistered: true } : undefined;
+  try {
+    const { data } = await supabase.from("members").select("*").eq("nsa", nsa).single();
+    return data ? { ...toCamel(data), isPreRegistered: true } : undefined;
+  } catch { return undefined; }
 }
 
 export async function seedMembers() {
-  const { count } = await supabase.from("members").select("*", { count: "exact", head: true });
-  if (count && count > 0) return;
-  for (const m of PRE_REGISTERED_MEMBERS) {
-    await sbAddMember(m);
+  try {
+    const { count } = await supabase.from("members").select("*", { count: "exact", head: true });
+    if (count && count > 0) return;
+    for (const m of PRE_REGISTERED_MEMBERS) {
+      await sbAddMember(m);
+    }
+  } catch (e) {
+    console.error("[seedMembers] Failed:", e);
   }
 }
 
@@ -448,30 +468,37 @@ export function useLocalData() {
   const [pemanduAssignments, setPemanduAssignments] = useState<LocalPemanduAssignment[]>([]);
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
   const [standalonePemandus, setStandalonePemandus] = useState<StandalonePemandu[]>([]);
+  const [dbError, setDbError] = useState<string | null>(null);
 
   // Load all data from Supabase
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const [m, r, a, k, ka, pa, l, sp] = await Promise.all([
-        sbGetMembers(),
-        sbGetRegistrants(),
-        sbGetActivities(),
-        sbGetKelompoks(),
-        sbGetKelompokAssignments(),
-        sbGetPemanduAssignments(),
-        sbGetLocations(),
-        supabase.from("standalone_pemandus").select("*").then(({ data }) => (data || []).map(toCamel)),
-      ]);
-      if (cancelled) return;
-      setMembers(m);
-      setRegistrants(r);
-      setActivities(a);
-      setKelompoks(k);
-      setKelompokAssignments(ka);
-      setPemanduAssignments(pa);
-      setLocations(l);
-      setStandalonePemandus(sp);
+      try {
+        setDbError(null);
+        const [m, r, a, k, ka, pa, l, sp] = await Promise.all([
+          sbGetMembers(),
+          sbGetRegistrants(),
+          sbGetActivities(),
+          sbGetKelompoks(),
+          sbGetKelompokAssignments(),
+          sbGetPemanduAssignments(),
+          sbGetLocations(),
+          supabase.from("standalone_pemandus").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setMembers(m);
+        setRegistrants(r);
+        setActivities(a);
+        setKelompoks(k);
+        setKelompokAssignments(ka);
+        setPemanduAssignments(pa);
+        setLocations(l);
+        setStandalonePemandus(sp);
+      } catch (e: any) {
+        console.error("[useLocalData] Failed to load data:", e?.message || e);
+        if (!cancelled) setDbError(e?.message || "Gagal terhubung ke database");
+      }
     }
     load();
     return () => { cancelled = true; };
@@ -479,10 +506,13 @@ export function useLocalData() {
 
   // Seed members if empty
   useEffect(() => {
-    if (members.length === 0) {
-      seedMembers().then(() => refresh());
+    if (members.length === 0 && !dbError) {
+      seedMembers().catch((e) => {
+        console.error("[seedMembers] Failed:", e?.message || e);
+        setDbError("Gagal menyimpan data anggota");
+      }).then(() => refresh());
     }
-  }, [members.length]);
+  }, [members.length, dbError]);
 
   // ─── CRUD Operations ────────────────────────────────────────────
   const addRegistrant = async (data: Omit<LocalRegistrant, "id" | "createdAt">) => {
@@ -583,6 +613,7 @@ export function useLocalData() {
   return {
     version,
     refresh,
+    dbError,
     // Data arrays
     registrants,
     activities,

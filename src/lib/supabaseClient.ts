@@ -3,16 +3,27 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    "[Buku Poin UFO] Supabase not configured. " +
-    "Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables."
-  );
+let client: any;
+
+try {
+  client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+  });
+} catch (e: any) {
+  console.error("[Supabase] Failed to create client:", e?.message || e);
+  // Create a dummy that returns empty data so the app doesn't crash
+  client = {
+    from: () => ({
+      select: () => ({ data: null, error: null }),
+      insert: () => ({ data: null, error: null, select: () => ({ data: null, error: null, single: () => ({ data: null, error: null }) }) }),
+      update: () => ({ error: null, eq: () => ({ error: null }) }),
+      delete: () => ({ error: null, eq: () => ({ error: null }) }),
+      order: function() { return this; },
+    }),
+  };
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: { persistSession: false },
-});
+export const supabase = client;
 
 // ─── Types for Supabase tables ────────────────────────────────────
 export interface DbMember {

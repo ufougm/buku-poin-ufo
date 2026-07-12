@@ -4,41 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LogIn, UserPlus, ArrowLeft, Loader2, ShieldCheck, Users, User } from "lucide-react";
+import { LogIn, ArrowLeft, Loader2, Users } from "lucide-react";
 import { Link } from "react-router";
 import { seedMembers, getMemberByNSA } from "@/hooks/useLocalData";
-import { supabase } from "@/lib/supabaseClient";
-
-// ─── Free Users (Supabase-backed) ─────────────────────────────────
-interface FreeUser {
-  username: string;
-  name: string;
-  email?: string;
-  password: string;
-  role: "user";
-  createdAt: string;
-}
-
-async function findFreeUserByUsername(username: string): Promise<FreeUser | undefined> {
-  const { data } = await supabase.from("free_users").select("*").eq("username", username).single();
-  if (!data) return undefined;
-  return { username: data.username, name: data.name, email: data.email, password: data.password, role: data.role, createdAt: data.created_at };
-}
-
-async function saveFreeUser(user: FreeUser) {
-  await supabase.from("free_users").insert([{
-    username: user.username,
-    name: user.name,
-    email: user.email,
-    password: user.password,
-    role: user.role,
-    created_at: user.createdAt,
-  }]);
-}
+import { getRegistrantByEmail } from "@/lib/googleSheets";
 
 // ─── Session Management ───────────────────────────────────────────
 interface SessionUser {
-  id: string;       // NSA or username
+  id: string;
   name: string;
   email?: string;
   role: string;
@@ -50,7 +23,6 @@ interface SessionUser {
 function setSession(user: SessionUser) {
   localStorage.setItem("ukm_session_user", JSON.stringify(user));
   localStorage.setItem("ukm_session_user_ts", String(Date.now()));
-  // Redirect based on effective role
   const effectiveRole = user.role === "psdm_pemandu" ? "psdm" : user.role;
   if (effectiveRole === "psdm") {
     window.location.href = "#/admin";
@@ -62,31 +34,34 @@ function setSession(user: SessionUser) {
 }
 
 export default function Login() {
-  // Seed pre-registered members on first load
   seedMembers();
 
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  // ─── Tab: anggota (NSA) ─────────────────────────────────────────
+  const [nsaUsername, setNsaUsername] = useState("");
+  const [nsaPassword, setNsaPassword] = useState("");
+
+  // ─── Tab: calon anggota (Email + NIM) ───────────────────────────
+  const [caEmail, setCaEmail] = useState("");
+  const [caNim, setCaNim] = useState("");
+
+  // ─── Shared state ───────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // ─── Login handler ──────────────────────────────────────────────
-  const handleLogin = async (e: React.FormEvent) => {
+  // ─── Login: Anggota (NSA-based) ─────────────────────────────────
+  const handleAnggotaLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!username.trim() || !password.trim()) {
+    if (!nsaUsername.trim() || !nsaPassword.trim()) {
       setError("Username dan password wajib diisi");
       return;
     }
 
     // Try 1: Pre-registered member by NSA
-    const member = await getMemberByNSA(username.trim());
+    const member = await getMemberByNSA(nsaUsername.trim());
     if (member) {
-      if (member.password !== password) {
+      if (member.password !== nsaPassword) {
         setError("Password salah.");
         return;
       }
@@ -102,67 +77,43 @@ export default function Login() {
       return;
     }
 
-    // Try 2: Free signup user by username
-    const freeUser = await findFreeUserByUsername(username.trim());
-    if (freeUser) {
-      if (freeUser.password !== password) {
-        setError("Password salah.");
-        return;
-      }
-      setLoading(true);
-      setSession({
-        id: freeUser.username,
-        name: freeUser.name,
-        email: freeUser.email,
-        role: freeUser.role,
-        isPreRegistered: false,
-      });
-      return;
-    }
-
-    setError("Username tidak ditemukan. Silakan daftar terlebih dahulu.");
+    setError("NSA tidak ditemukan. Pastikan NSA Anda benar.");
   };
 
-  // ─── Register handler ───────────────────────────────────────────
-  const handleRegister = async (e: React.FormEvent) => {
+  // ─── Login: Calon Anggota (Email + NIM) ─────────────────────────
+  const handleCalonAnggotaLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!name.trim()) { setError("Nama lengkap wajib diisi"); return; }
-    if (!username.trim()) { setError("Username wajib diisi"); return; }
-    if (!password.trim()) { setError("Password wajib diisi"); return; }
-    if (password.length < 4) { setError("Password minimal 4 karakter"); return; }
-
-    // Check if username conflicts with existing NSA
-    const existingMember = await getMemberByNSA(username.trim());
-    if (existingMember) {
-      setError("Username sudah terdaftar sebagai Nomor Seri Anggota. Gunakan NSA Anda untuk masuk.");
+    if (!caEmail.trim() || !caNim.trim()) {
+      setError("Email dan NIM wajib diisi");
       return;
     }
 
-    // Check if username already taken by free user
-    const existingFree = await findFreeUserByUsername(username.trim());
-    if (existingFree) {
-      setError("Username sudah digunakan. Silakan pilih username lain.");
+    // Check registrant from Google Sheets sync (Supabase)
+    const registrant = await getRegistrantByEmail(caEmail.trim());
+    if (!registrant) {
+      setError("Email tidak ditemukan. Pastikan Anda sudah mengisi form pendaftaran CUFO.");
+      return;
+    }
+
+    if (registrant.status !== "active") {
+      setError("Akun Anda tidak aktif. Hubungi admin PSDM.");
+      return;
+    }
+
+    // Verify password: use stored password (initially = NIM) or fallback to NIM
+    const expectedPassword = registrant.password || registrant.nim;
+    if (caNim.trim() !== expectedPassword) {
+      setError("NIM/Password salah. Password awal = NIM Anda.");
       return;
     }
 
     setLoading(true);
-
-    const newUser: FreeUser = {
-      username: username.trim(),
-      name: name.trim(),
-      email: email.trim() || undefined,
-      password,
-      role: "user",
-      createdAt: new Date().toISOString(),
-    };
-    saveFreeUser(newUser);
-
     setSession({
-      id: newUser.username,
-      name: newUser.name,
-      email: newUser.email,
+      id: String(registrant.id),
+      name: registrant.fullName,
+      email: registrant.email,
       role: "user",
       isPreRegistered: false,
     });
@@ -171,64 +122,57 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-red-50 p-4">
       <div className="w-full max-w-sm">
-        {/* Upper logo - horizontal */}
+        {/* Logo */}
         <div className="flex items-center justify-center mb-6">
           <img src="/logo-ufo.png" alt="UFO UGM" className="h-16 w-auto max-w-[280px] object-contain" />
         </div>
 
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-2">
-            {/* Lower logo - sunburst with solid black circle */}
             <div className="mx-auto mb-4 w-24 h-24 rounded-full bg-black flex items-center justify-center shadow-lg">
               <img src="/logo-ufo-square.png" alt="UFO UGM" className="w-20 h-20 object-contain" />
             </div>
-            <CardTitle className="text-xl">
-              {mode === "login" ? "Masuk" : "Daftar Akun"}
-            </CardTitle>
-            <CardDescription>
-              Buku Poin UFO UGM
-            </CardDescription>
+            <CardTitle className="text-xl">Masuk</CardTitle>
+            <CardDescription>Buku Poin UFO UGM</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
             {error && (
-              <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">
-                {error}
-              </div>
+              <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">{error}</div>
             )}
 
-            <Tabs value={mode} onValueChange={(v) => { setMode(v as any); setError(""); }}>
+            <Tabs defaultValue="anggota" onValueChange={() => setError("")}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Masuk</TabsTrigger>
-                <TabsTrigger value="register">Daftar (Calon Anggota)</TabsTrigger>
+                <TabsTrigger value="anggota">Anggota</TabsTrigger>
+                <TabsTrigger value="calon">Calon Anggota</TabsTrigger>
               </TabsList>
 
-              {/* ─── LOGIN ─── */}
-              <TabsContent value="login">
-                <form onSubmit={handleLogin} className="space-y-4 mt-4">
+              {/* ─── ANGGOTA (NSA Login) ─── */}
+              <TabsContent value="anggota">
+                <form onSubmit={handleAnggotaLogin} className="space-y-4 mt-4">
                   <div>
-                    <Label>Username / NSA</Label>
+                    <Label>NSA / Username</Label>
                     <Input
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Masukkan NSA atau username"
+                      value={nsaUsername}
+                      onChange={(e) => setNsaUsername(e.target.value)}
+                      placeholder="Masukkan NSA Anda"
                       required
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      Anggota terdaftar: masukkan NSA Anda
+                      Contoh: NSA.3325.023.1132
                     </p>
                   </div>
                   <div>
                     <Label>Password</Label>
                     <Input
                       type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={nsaPassword}
+                      onChange={(e) => setNsaPassword(e.target.value)}
                       placeholder="••••••••"
                       required
                     />
                     <p className="text-xs text-gray-400 mt-1">
-                      Password default anggota: 4 digit terakhir NSA
+                      Password default: 4 digit terakhir NSA
                     </p>
                   </div>
                   <Button
@@ -246,52 +190,40 @@ export default function Login() {
                 </form>
               </TabsContent>
 
-              {/* ─── REGISTER ─── */}
-              <TabsContent value="register">
-                <form onSubmit={handleRegister} className="space-y-4 mt-4">
-                  <div>
-                    <Label>Nama Lengkap *</Label>
-                    <Input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Nama lengkap Anda"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label>Username *</Label>
-                    <Input
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Buat username Anda"
-                      required
-                    />
-                    <p className="text-xs text-gray-400 mt-1">
-                      Username bebas, tidak perlu NSA
+              {/* ─── CALON ANGGOTA (Email + NIM Login) ─── */}
+              <TabsContent value="calon">
+                <form onSubmit={handleCalonAnggotaLogin} className="space-y-4 mt-4">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-xs text-blue-700">
+                      <strong>Catatan:</strong> Login ini khusus Calon Anggota yang sudah mengisi form pendaftaran CUFO. Password awal = NIM Anda.
                     </p>
                   </div>
                   <div>
-                    <Label>Email (opsional)</Label>
+                    <Label>Email</Label>
                     <Input
                       type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="nama@mail.ugm.ac.id"
-                    />
-                  </div>
-                  <div>
-                    <Label>Password *</Label>
-                    <Input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Min. 4 karakter"
+                      value={caEmail}
+                      onChange={(e) => setCaEmail(e.target.value)}
+                      placeholder="email@mail.ugm.ac.id"
                       required
                     />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Email yang Anda gunakan saat mendaftar
+                    </p>
                   </div>
-                  <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded">
-                    Pendaftaran ini untuk Calon Anggota baru. Role akan otomatis menjadi "Calon Anggota".
-                  </p>
+                  <div>
+                    <Label>NIM / Password</Label>
+                    <Input
+                      type="password"
+                      value={caNim}
+                      onChange={(e) => setCaNim(e.target.value)}
+                      placeholder="Masukkan NIM Anda"
+                      required
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Password awal = NIM. Bisa diubah di Profil nanti.
+                    </p>
+                  </div>
                   <Button
                     type="submit"
                     className="w-full bg-red-600 hover:bg-red-700 h-11"
@@ -300,9 +232,9 @@ export default function Login() {
                     {loading ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (
-                      <UserPlus className="h-4 w-4 mr-2" />
+                      <Users className="h-4 w-4 mr-2" />
                     )}
-                    Daftar
+                    Masuk
                   </Button>
                 </form>
               </TabsContent>

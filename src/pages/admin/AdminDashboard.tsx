@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocalData } from "@/hooks/useLocalData";
+import { syncRegistrantsFromSheet } from "@/lib/googleSheets";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,6 +40,8 @@ import {
   X,
   UserCircle,
   AlertTriangle,
+  RefreshCw,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   Dialog,
@@ -146,6 +149,10 @@ export default function AdminDashboard() {
   const [kelompokForm, setKelompokForm] = useState({ name: "", pemanduId1: "", pemanduId2: "" });
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: any } | null>(null);
 
+  // Google Sheets sync state
+  const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "done" | "error">("idle");
+  const [syncResult, setSyncResult] = useState<{ added: number; skipped: number; errors: number } | null>(null);
+
   // Get data safely with error handling
   const data = useMemo(() => safeCompute(local), [refreshTick, local]);
 
@@ -160,6 +167,22 @@ export default function AdminDashboard() {
   const handleRemove = async (registrantId: number) => {
     await local.removeRegistrantFromKelompok(registrantId);
     setRefreshTick((t) => t + 1);
+  };
+
+  // ─── Google Sheets Sync ──────────────────────────────────────────
+  const handleSyncSheets = async () => {
+    setSyncStatus("syncing");
+    setSyncResult(null);
+    try {
+      const result = await syncRegistrantsFromSheet();
+      setSyncResult(result);
+      setSyncStatus("done");
+      refreshData(); // refresh registrants list
+    } catch (e: any) {
+      console.error("[handleSyncSheets]", e);
+      setSyncStatus("error");
+      setSyncResult({ added: 0, skipped: 0, errors: 1 });
+    }
   };
 
   // ─── Data Management Handlers ────────────────────────────────────
@@ -340,6 +363,49 @@ export default function AdminDashboard() {
 
           {/* Overview */}
           <TabsContent value="overview" className="space-y-6">
+            {/* Google Sheets Sync Card */}
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileSpreadsheet className="h-5 w-5 text-green-600" />
+                  Sinkronisasi Google Form
+                </CardTitle>
+                <CardDescription>
+                  Tarik data pendaftar dari Google Spreadsheet "OPEN RECRUITMENT CUFO XXXIV" ke database.
+                  Calon anggota yang sudah terdaftar akan dilewati.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <Button
+                    onClick={handleSyncSheets}
+                    disabled={syncStatus === "syncing"}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {syncStatus === "syncing" ? (
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                    )}
+                    {syncStatus === "syncing" ? "Menyinkronkan..." : "Sinkronkan Sekarang"}
+                  </Button>
+                  {syncStatus === "done" && syncResult && (
+                    <span className="text-sm text-green-700 bg-green-100 px-3 py-1 rounded-full">
+                      {syncResult.added} ditambahkan, {syncResult.skipped} dilewati
+                    </span>
+                  )}
+                  {syncStatus === "error" && (
+                    <span className="text-sm text-red-700 bg-red-100 px-3 py-1 rounded-full">
+                      Gagal sinkron. Periksa koneksi dan URL spreadsheet.
+                    </span>
+                  )}
+                </div>
+                {syncResult && syncResult.errors > 0 && (
+                  <p className="text-xs text-red-600 mt-2">{syncResult.errors} error terjadi saat sinkronisasi.</p>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>

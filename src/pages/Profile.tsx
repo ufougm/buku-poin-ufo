@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, User, Lock, ShieldCheck, Users, Save, AlertTriangle } from "lucide-react";
 import { getMembers, updateMember } from "@/hooks/useLocalData";
+import { updateRegistrantPassword, getRegistrantByEmail } from "@/lib/googleSheets";
 
 const FREE_USERS_KEY = "ukm_free_users";
 const SESSION_KEY = "ukm_session_user";
@@ -90,7 +91,7 @@ export default function Profile() {
   }
 
   // Handle save profile
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -132,7 +133,6 @@ export default function Profile() {
       // Pre-registered member: update member DB
       const member = getMembers().find((m) => m.nsa === user.id);
       if (member) {
-        // For pre-registered, only password can be changed, not NSA (username)
         if (trimmedUsername !== user.id) {
           setError("Anggota terdaftar tidak dapat mengubah NSA. Hanya password yang dapat diubah.");
           return;
@@ -143,6 +143,30 @@ export default function Profile() {
             return;
           }
           updateMember(user.id, { password: newPassword });
+        }
+      }
+    } else if (user.role === "user" && user.email) {
+      // Calon Anggota (from Google Sheets): password stored in Supabase registrants table
+      if (trimmedUsername !== user.id) {
+        setError("Calon Anggota tidak dapat mengubah ID. Hanya password yang dapat diubah.");
+        return;
+      }
+      if (passwordChanged) {
+        // Verify current password against Supabase
+        const registrant = await getRegistrantByEmail(user.email);
+        if (!registrant) {
+          setError("Data registrant tidak ditemukan di database.");
+          return;
+        }
+        const expectedPassword = registrant.password || registrant.nim;
+        if (currentPassword !== expectedPassword) {
+          setError("Password saat ini salah.");
+          return;
+        }
+        const ok = await updateRegistrantPassword(user.email, newPassword);
+        if (!ok) {
+          setError("Gagal mengubah password. Coba lagi nanti.");
+          return;
         }
       }
     } else {
@@ -163,7 +187,6 @@ export default function Profile() {
         password: passwordChanged ? newPassword : undefined,
       });
 
-      // Update session if username changed
       if (trimmedUsername !== user.id) {
         const session = JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
         session.id = trimmedUsername;
@@ -242,6 +265,8 @@ export default function Profile() {
             <CardDescription>
               {user.isPreRegistered
                 ? "Anggota terdaftar hanya dapat mengubah password. NSA tidak dapat diubah."
+                : user.role === "user" && user.email
+                ? "Calon Anggota hanya dapat mengubah password. Email: " + user.email
                 : "Ubah username dan password akun Anda."}
             </CardDescription>
           </CardHeader>
@@ -260,19 +285,21 @@ export default function Profile() {
             )}
 
             <form onSubmit={handleSave} className="space-y-4">
-              {/* Username */}
+              {/* Username / ID */}
               <div>
                 <Label>
-                  {user.isPreRegistered ? "NSA" : "Username"}
+                  {user.isPreRegistered ? "NSA" : user.role === "user" && user.email ? "ID" : "Username"}
                 </Label>
                 <Input
                   value={newUsername}
                   onChange={(e) => setNewUsername(e.target.value)}
-                  disabled={user.isPreRegistered}
-                  className={user.isPreRegistered ? "bg-gray-100 text-gray-500" : ""}
+                  disabled={user.isPreRegistered || (user.role === "user" && !!user.email)}
+                  className={(user.isPreRegistered || (user.role === "user" && !!user.email)) ? "bg-gray-100 text-gray-500" : ""}
                 />
-                {user.isPreRegistered && (
-                  <p className="text-xs text-gray-400 mt-1">NSA tidak dapat diubah.</p>
+                {(user.isPreRegistered || (user.role === "user" && !!user.email)) && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {user.isPreRegistered ? "NSA tidak dapat diubah." : "ID tidak dapat diubah."}
+                  </p>
                 )}
               </div>
 

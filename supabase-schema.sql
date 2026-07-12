@@ -20,11 +20,16 @@ CREATE TABLE IF NOT EXISTS registrants (
   id SERIAL PRIMARY KEY,
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
+  nim TEXT,
+  password TEXT,
   year TEXT,
   major TEXT,
   status TEXT DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Unique constraint on email for login
+CREATE UNIQUE INDEX IF NOT EXISTS idx_registrants_email ON registrants(email);
 
 -- 3. Activities
 CREATE TABLE IF NOT EXISTS activities (

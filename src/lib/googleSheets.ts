@@ -172,63 +172,88 @@ export async function syncRegistrantsFromSheet(): Promise<SyncResult> {
     return { added: 0, skipped: 0, errors: 0, details, fetchedCount: 0 };
   }
 
-  // Step 3: Get existing registrants
-  let existingEmails: Set<string>;
+  // Step 3: Get existing registrants (email -> id)
+  let existingRecords: Map<string, number>;
   try {
-    const { data: existing, error: existingError } = await supabase.from("registrants").select("email");
+    const { data: existing, error: existingError } = await supabase.from("registrants").select("id,email");
     if (existingError) {
       details.push(`Error mengambil data existing: ${existingError.message}`);
       return { added: 0, skipped: 0, errors: 1, details, fetchedCount: sheetData.length };
     }
-    existingEmails = new Set((existing || []).map((r: any) => (r.email || "").toLowerCase()));
-    details.push(`Email sudah terdaftar di database: ${existingEmails.size}`);
+    existingRecords = new Map((existing || []).map((r: any) => [(r.email || "").toLowerCase(), r.id]));
+    details.push(`Email sudah terdaftar di database: ${existingRecords.size}`);
   } catch (e: any) {
     details.push(`Error cek existing: ${e.message}`);
     return { added: 0, skipped: 0, errors: 1, details, fetchedCount: sheetData.length };
   }
 
-  // Step 4: Insert new registrants
+  // Step 4: Insert new + update existing
   let added = 0;
+  let updated = 0;
   let skipped = 0;
   let errors = 0;
 
   for (const row of sheetData) {
-    if (existingEmails.has(row.email)) {
-      skipped++;
-      continue;
-    }
+    const existingId = existingRecords.get(row.email);
 
-    try {
-      const { error } = await supabase.from("registrants").insert([{
-        full_name: row.fullName,
-        email: row.email,
-        nim: row.nim,
-        password: row.nim, // initial password = NIM
-        year: row.angkatan,
-        major: `${row.faculty}${row.prodi ? " - " + row.prodi : ""}`,
-        whatsapp: row.whatsapp,
-        asal_daerah: row.asalDaerah,
-        domisili: row.domisili,
-        genre_foto: row.genreFoto,
-        status: "active",
-        created_at: new Date().toISOString(),
-      }]);
+    if (existingId) {
+      // Update existing registrant with fresh spreadsheet data
+      try {
+        const { error } = await supabase.from("registrants").update({
+          full_name: row.fullName,
+          nim: row.nim,
+          year: row.angkatan,
+          major: `${row.faculty}${row.prodi ? " - " + row.prodi : ""}`,
+          whatsapp: row.whatsapp,
+          asal_daerah: row.asalDaerah,
+          domisili: row.domisili,
+          genre_foto: row.genreFoto,
+        }).eq("id", existingId);
 
-      if (error) {
+        if (error) {
+          errors++;
+          details.push(`Update error ${row.email}: ${error.message}`);
+        } else {
+          updated++;
+        }
+      } catch (e: any) {
         errors++;
-        details.push(`Insert error ${row.email}: ${error.message}`);
-      } else {
-        added++;
-        existingEmails.add(row.email);
+        details.push(`Update exception ${row.email}: ${e.message}`);
       }
-    } catch (e: any) {
-      errors++;
-      details.push(`Insert exception ${row.email}: ${e.message}`);
+    } else {
+      // Insert new registrant
+      try {
+        const { error } = await supabase.from("registrants").insert([{
+          full_name: row.fullName,
+          email: row.email,
+          nim: row.nim,
+          password: row.nim,
+          year: row.angkatan,
+          major: `${row.faculty}${row.prodi ? " - " + row.prodi : ""}`,
+          whatsapp: row.whatsapp,
+          asal_daerah: row.asalDaerah,
+          domisili: row.domisili,
+          genre_foto: row.genreFoto,
+          status: "active",
+          created_at: new Date().toISOString(),
+        }]);
+
+        if (error) {
+          errors++;
+          details.push(`Insert error ${row.email}: ${error.message}`);
+        } else {
+          added++;
+          existingRecords.set(row.email, 0);
+        }
+      } catch (e: any) {
+        errors++;
+        details.push(`Insert exception ${row.email}: ${e.message}`);
+      }
     }
   }
 
-  details.push(`Selesai: ${added} ditambahkan, ${skipped} dilewati, ${errors} error`);
-  return { added, skipped, errors, details, fetchedCount: sheetData.length };
+  details.push(`Selesai: ${added} ditambahkan, ${updated} diperbarui, ${skipped} dilewati, ${errors} error`);
+  return { added, skipped: Math.max(0, skipped), errors, details, fetchedCount: sheetData.length };
 }
 
 /**

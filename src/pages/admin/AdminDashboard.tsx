@@ -151,7 +151,7 @@ export default function AdminDashboard() {
 
   // Google Sheets sync state
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "done" | "error">("idle");
-  const [syncResult, setSyncResult] = useState<{ added: number; skipped: number; errors: number; details: string[]; fetchedCount: number } | null>(null);
+  const [syncResult, setSyncResult] = useState<{ added: number; updated: number; skipped: number; errors: number; details: string[]; fetchedCount: number } | null>(null);
   const [showSyncLogs, setShowSyncLogs] = useState(false);
 
   // Get data safely with error handling
@@ -171,14 +171,14 @@ export default function AdminDashboard() {
   };
 
   // ─── Google Sheets Sync ──────────────────────────────────────────
-  const handleSyncSheets = async () => {
+  const handleSyncSheets = async (updateExisting = false) => {
     setSyncStatus("syncing");
     setSyncResult(null);
     setShowSyncLogs(false);
-    const result = await syncRegistrantsFromSheet();
+    const result = await syncRegistrantsFromSheet(updateExisting);
     setSyncResult(result);
     setSyncStatus(result.errors > 0 ? "error" : "done");
-    if (result.added > 0) refreshData();
+    if (result.added > 0 || result.updated > 0) refreshData();
   };
 
   // ─── Data Management Handlers ────────────────────────────────────
@@ -368,13 +368,13 @@ export default function AdminDashboard() {
                 </CardTitle>
                 <CardDescription>
                   Tarik data pendaftar dari Google Spreadsheet "OPEN RECRUITMENT CUFO XXXIV" ke database.
-                  Calon anggota yang sudah terdaftar akan dilewati.
+                  Sinkron baru = hanya tambah data baru. Sinkron ulang = juga perbarui data yang sudah ada.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
                   <Button
-                    onClick={handleSyncSheets}
+                    onClick={() => handleSyncSheets(false)}
                     disabled={syncStatus === "syncing"}
                     className="bg-green-600 hover:bg-green-700"
                   >
@@ -383,11 +383,20 @@ export default function AdminDashboard() {
                     ) : (
                       <RefreshCw className="h-4 w-4 mr-2" />
                     )}
-                    {syncStatus === "syncing" ? "Menyinkronkan..." : "Sinkronkan Sekarang"}
+                    {syncStatus === "syncing" ? "Menyinkronkan..." : "Sinkron Baru"}
+                  </Button>
+                  <Button
+                    onClick={() => handleSyncSheets(true)}
+                    disabled={syncStatus === "syncing"}
+                    variant="outline"
+                    className="border-green-600 text-green-700 hover:bg-green-50"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sinkron Ulang (Update Data)
                   </Button>
                   {syncStatus === "done" && syncResult && (
                     <span className="text-sm text-green-700 bg-green-100 px-3 py-1 rounded-full">
-                      {syncResult.fetchedCount} dibaca, {syncResult.added} ditambahkan, {syncResult.skipped} dilewati
+                      {syncResult.fetchedCount} dibaca, {syncResult.added} ditambahkan, {syncResult.updated || 0} diperbarui
                     </span>
                   )}
                   {syncStatus === "error" && syncResult && (
@@ -521,7 +530,10 @@ export default function AdminDashboard() {
                 <CardDescription>Pilih kelompok dan CUFO. CUFO akan otomatis ditugaskan ke 2 pemandu dalam kelompok tersebut.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleAssign(); }}
+                  className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end"
+                >
                   <div>
                     <label className="text-sm font-medium mb-2 block">Kelompok</label>
                     <Select value={selectedKelompok} onValueChange={setSelectedKelompok}>
@@ -544,8 +556,8 @@ export default function AdminDashboard() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleAssign} disabled={!selectedKelompok || !selectedRegistrant} className="bg-red-600 hover:bg-red-700"><LinkIcon className="h-4 w-4 mr-2" />Tugaskan</Button>
-                </div>
+                  <Button type="submit" disabled={!selectedKelompok || !selectedRegistrant} className="bg-red-600 hover:bg-red-700"><LinkIcon className="h-4 w-4 mr-2" />Tugaskan</Button>
+                </form>
 
                 {data.pemanduStats.length > 0 && (
                   <div className="mt-6">
@@ -860,18 +872,21 @@ export default function AdminDashboard() {
             <Dialog open={showPemanduForm} onOpenChange={setShowPemanduForm}>
               <DialogContent className="max-w-md">
                 <DialogHeader><DialogTitle>{editingPemandu ? "Edit Pemandu" : "Tambah Pemandu"}</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <div><Label>Nama Lengkap *</Label><Input value={pemanduForm.fullName} onChange={(e) => setPemanduForm({ ...pemanduForm, fullName: e.target.value })} placeholder="Nama pemandu" /></div>
-                  <div><Label>Email *</Label><Input type="email" value={pemanduForm.email} onChange={(e) => setPemanduForm({ ...pemanduForm, email: e.target.value })} placeholder="email@ugm.ac.id" /></div>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleSavePemandu(); }}
+                  className="space-y-4"
+                >
+                  <div><Label>Nama Lengkap *</Label><Input value={pemanduForm.fullName} onChange={(e) => setPemanduForm({ ...pemanduForm, fullName: e.target.value })} placeholder="Nama pemandu" required /></div>
+                  <div><Label>Email *</Label><Input type="email" value={pemanduForm.email} onChange={(e) => setPemanduForm({ ...pemanduForm, email: e.target.value })} placeholder="email@ugm.ac.id" required /></div>
                   <div><Label>Keahlian</Label><Input value={pemanduForm.expertise} onChange={(e) => setPemanduForm({ ...pemanduForm, expertise: e.target.value })} placeholder="Contoh: Fotografi Jurnalistik" /></div>
                   <div><Label>Kapasitas CUFO</Label><Input type="number" value={pemanduForm.maxMentees} onChange={(e) => setPemanduForm({ ...pemanduForm, maxMentees: Number(e.target.value) })} /></div>
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setShowPemanduForm(false)}>Batal</Button>
-                    <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleSavePemandu} disabled={!pemanduForm.fullName.trim() || !pemanduForm.email.trim()}>
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowPemanduForm(false)}>Batal</Button>
+                    <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700" disabled={!pemanduForm.fullName.trim() || !pemanduForm.email.trim()}>
                       {editingPemandu ? "Simpan Perubahan" : "Tambah Pemandu"}
                     </Button>
                   </div>
-                </div>
+                </form>
               </DialogContent>
             </Dialog>
 
@@ -879,23 +894,29 @@ export default function AdminDashboard() {
             <Dialog open={showVerifiedForm} onOpenChange={setShowVerifiedForm}>
               <DialogContent className="max-w-md">
                 <DialogHeader><DialogTitle>{editingVerified ? "Edit Anggota Terverifikasi" : "Tambah Anggota Terverifikasi"}</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <div><Label>Nomor Seri Anggota *</Label><Input value={verifiedForm.serialNumber} onChange={(e) => setVerifiedForm({ ...verifiedForm, serialNumber: e.target.value })} placeholder="Contoh: UFO-2024-003" disabled={!!editingVerified} /></div>
-                  <div><Label>Nama Lengkap *</Label><Input value={verifiedForm.fullName} onChange={(e) => setVerifiedForm({ ...verifiedForm, fullName: e.target.value })} placeholder="Nama lengkap" /></div>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleSaveVerified(); }}
+                  className="space-y-4"
+                >
+                  <div><Label>Nomor Seri Anggota *</Label><Input value={verifiedForm.serialNumber} onChange={(e) => setVerifiedForm({ ...verifiedForm, serialNumber: e.target.value })} placeholder="Contoh: UFO-2024-003" disabled={!!editingVerified} required /></div>
+                  <div><Label>Nama Lengkap *</Label><Input value={verifiedForm.fullName} onChange={(e) => setVerifiedForm({ ...verifiedForm, fullName: e.target.value })} placeholder="Nama lengkap" required /></div>
                   <div><Label>Email</Label><Input type="email" value={verifiedForm.email} onChange={(e) => setVerifiedForm({ ...verifiedForm, email: e.target.value })} placeholder="email@ugm.ac.id" /></div>
                   <div><Label>Role</Label>
-                    <select value={verifiedForm.role} onChange={(e) => setVerifiedForm({ ...verifiedForm, role: e.target.value as "pemandu" | "psdm" })} className="w-full h-10 px-3 border border-gray-200 rounded-md text-sm">
-                      <option value="pemandu">Pemandu</option>
-                      <option value="psdm">PSDM (Admin)</option>
-                    </select>
+                    <Select value={verifiedForm.role} onValueChange={(v) => setVerifiedForm({ ...verifiedForm, role: v as "pemandu" | "psdm" })}>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pemandu">Pemandu</SelectItem>
+                        <SelectItem value="psdm">PSDM (Admin)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setShowVerifiedForm(false)}>Batal</Button>
-                    <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleSaveVerified} disabled={!verifiedForm.serialNumber.trim() || !verifiedForm.fullName.trim()}>
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowVerifiedForm(false)}>Batal</Button>
+                    <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700" disabled={!verifiedForm.serialNumber.trim() || !verifiedForm.fullName.trim()}>
                       {editingVerified ? "Simpan Perubahan" : "Tambah"}
                     </Button>
                   </div>
-                </div>
+                </form>
               </DialogContent>
             </Dialog>
 
@@ -903,27 +924,69 @@ export default function AdminDashboard() {
             <Dialog open={showKelompokForm} onOpenChange={setShowKelompokForm}>
               <DialogContent className="max-w-md">
                 <DialogHeader><DialogTitle>{editingKelompok ? "Edit Kelompok" : "Tambah Kelompok"}</DialogTitle></DialogHeader>
-                <div className="space-y-4">
-                  <div><Label>Nama Kelompok *</Label><Input value={kelompokForm.name} onChange={(e) => setKelompokForm({ ...kelompokForm, name: e.target.value })} placeholder="Contoh: Kelompok 1" /></div>
-                  <div><Label>Pemandu 1 *</Label>
-                    <select value={kelompokForm.pemanduId1} onChange={(e) => setKelompokForm({ ...kelompokForm, pemanduId1: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-md text-sm">
-                      <option value="">Pilih pemandu</option>
-                      {data.pemandus.map((p) => <option key={p.id} value={p.id.toString()}>{p.fullName}</option>)}
-                    </select>
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleSaveKelompok(); }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <Label>Nama Kelompok *</Label>
+                    <Input
+                      value={kelompokForm.name}
+                      onChange={(e) => setKelompokForm({ ...kelompokForm, name: e.target.value })}
+                      placeholder="Contoh: Kelompok 1"
+                      required
+                    />
                   </div>
-                  <div><Label>Pemandu 2 *</Label>
-                    <select value={kelompokForm.pemanduId2} onChange={(e) => setKelompokForm({ ...kelompokForm, pemanduId2: e.target.value })} className="w-full h-10 px-3 border border-gray-200 rounded-md text-sm">
-                      <option value="">Pilih pemandu</option>
-                      {data.pemandus.map((p) => <option key={p.id} value={p.id.toString()}>{p.fullName}</option>)}
-                    </select>
+                  <div>
+                    <Label>Pemandu 1 *</Label>
+                    <Select
+                      value={kelompokForm.pemanduId1}
+                      onValueChange={(v) => setKelompokForm({ ...kelompokForm, pemanduId1: v })}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih pemandu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {data.pemandus.map((p) => (
+                          <SelectItem key={p.id} value={p.id.toString()}>{p.fullName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Pemandu 2 *</Label>
+                    <Select
+                      value={kelompokForm.pemanduId2}
+                      onValueChange={(v) => setKelompokForm({ ...kelompokForm, pemanduId2: v })}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih pemandu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {data.pemandus.map((p) => (
+                          <SelectItem key={p.id} value={p.id.toString()}>{p.fullName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" className="flex-1" onClick={() => setShowKelompokForm(false)}>Batal</Button>
-                    <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleSaveKelompok} disabled={!kelompokForm.name.trim() || !kelompokForm.pemanduId1 || !kelompokForm.pemanduId2}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowKelompokForm(false)}
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-red-600 hover:bg-red-700"
+                      disabled={!kelompokForm.name.trim() || !kelompokForm.pemanduId1 || !kelompokForm.pemanduId2}
+                    >
                       {editingKelompok ? "Simpan Perubahan" : "Tambah Kelompok"}
                     </Button>
                   </div>
-                </div>
+                </form>
               </DialogContent>
             </Dialog>
 
@@ -932,15 +995,19 @@ export default function AdminDashboard() {
               <DialogContent className="max-w-sm">
                 <DialogHeader><DialogTitle>Konfirmasi Hapus</DialogTitle></DialogHeader>
                 <p className="text-sm text-gray-600">Apakah Anda yakin ingin menghapus {deleteConfirm?.type === "kelompok" ? "kelompok ini" : deleteConfirm?.type === "pemandu" ? "pemandu ini" : deleteConfirm?.type === "verified" ? "anggota terverifikasi ini" : "calon anggota ini"}? Data yang terkait juga akan dihapus.</p>
-                <div className="flex gap-2 pt-2">
-                  <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirm(null)}>Batal</Button>
-                  <Button variant="destructive" className="flex-1" onClick={() => {
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
                     if (deleteConfirm?.type === "kelompok") handleDeleteKelompok(deleteConfirm.id);
                     else if (deleteConfirm?.type === "pemandu") handleDeletePemandu(deleteConfirm.id);
                     else if (deleteConfirm?.type === "verified") handleDeleteVerified(deleteConfirm.id);
                     else if (deleteConfirm?.type === "registrant") handleDeleteRegistrant(deleteConfirm.id);
-                  }}>Hapus</Button>
-                </div>
+                  }}
+                  className="flex gap-2 pt-2"
+                >
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setDeleteConfirm(null)}>Batal</Button>
+                  <Button type="submit" variant="destructive" className="flex-1">Hapus</Button>
+                </form>
               </DialogContent>
             </Dialog>
           </TabsContent>

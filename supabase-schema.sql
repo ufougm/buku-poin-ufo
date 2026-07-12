@@ -22,14 +22,24 @@ CREATE TABLE IF NOT EXISTS registrants (
   email TEXT NOT NULL,
   nim TEXT,
   password TEXT,
-  year TEXT,
-  major TEXT,
+  year TEXT,          -- Angkatan (derived from NIM: 24 → 2024)
+  major TEXT,         -- Fakultas/Prodi
+  whatsapp TEXT,      -- Nomor WhatsApp
+  asal_daerah TEXT,   -- Asal Daerah
+  domisili TEXT,      -- Domisili Saat Ini
+  genre_foto TEXT,    -- Genre Foto yang Disukai
   status TEXT DEFAULT 'active',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Unique constraint on email for login
 CREATE UNIQUE INDEX IF NOT EXISTS idx_registrants_email ON registrants(email);
+
+-- Migration: Add new columns to existing registrants table (safe to re-run)
+ALTER TABLE registrants ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+ALTER TABLE registrants ADD COLUMN IF NOT EXISTS asal_daerah TEXT;
+ALTER TABLE registrants ADD COLUMN IF NOT EXISTS domisili TEXT;
+ALTER TABLE registrants ADD COLUMN IF NOT EXISTS genre_foto TEXT;
 
 -- 3. Activities
 CREATE TABLE IF NOT EXISTS activities (

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, User, Lock, ShieldCheck, Users, Save, AlertTriangle } from "lucide-react";
 import { getMembers, updateMember } from "@/hooks/useLocalData";
-import { updateRegistrantPassword, getRegistrantByEmail } from "@/lib/googleSheets";
+import { updateRegistrantPassword, getRegistrantByEmail, verifyRegistrantLogin } from "@/lib/googleSheets";
 
 const FREE_USERS_KEY = "ukm_free_users";
 const SESSION_KEY = "ukm_session_user";
@@ -152,15 +152,10 @@ export default function Profile() {
         return;
       }
       if (passwordChanged) {
-        // Verify current password against Supabase
-        const registrant = await getRegistrantByEmail(user.email);
+        // Verify current password: accept either NIM or current password
+        const registrant = await verifyRegistrantLogin(user.email, currentPassword);
         if (!registrant) {
-          setError("Data registrant tidak ditemukan di database.");
-          return;
-        }
-        const expectedPassword = registrant.password || registrant.nim;
-        if (currentPassword !== expectedPassword) {
-          setError("Password saat ini salah.");
+          setError("Password saat ini salah. Masukkan NIM Anda atau password yang sudah diubah.");
           return;
         }
         const ok = await updateRegistrantPassword(user.email, newPassword);

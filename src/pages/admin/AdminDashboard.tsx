@@ -817,15 +817,31 @@ export default function AdminDashboard() {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow><TableHead>Nama</TableHead><TableHead>Email</TableHead><TableHead>Angkatan</TableHead><TableHead>Jurusan</TableHead><TableHead>Aksi</TableHead></TableRow>
+                        <TableRow>
+                          <TableHead>Nama</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>NIM</TableHead>
+                          <TableHead>Angkatan</TableHead>
+                          <TableHead>Jurusan</TableHead>
+                          <TableHead>WhatsApp</TableHead>
+                          <TableHead>Asal Daerah</TableHead>
+                          <TableHead>Domisili</TableHead>
+                          <TableHead>Genre Foto</TableHead>
+                          <TableHead>Aksi</TableHead>
+                        </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {data.registrants.map((r) => (
+                        {data.registrants.map((r: any) => (
                           <TableRow key={r.id}>
                             <TableCell className="font-medium">{r.fullName}</TableCell>
                             <TableCell>{r.email}</TableCell>
+                            <TableCell className="font-mono text-xs">{r.nim}</TableCell>
                             <TableCell>{r.year}</TableCell>
                             <TableCell>{r.major}</TableCell>
+                            <TableCell>{r.whatsapp || "-"}</TableCell>
+                            <TableCell>{r.asalDaerah || "-"}</TableCell>
+                            <TableCell>{r.domisili || "-"}</TableCell>
+                            <TableCell>{r.genreFoto || "-"}</TableCell>
                             <TableCell>
                               <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ type: "registrant", id: r.id })}>
                                 <Trash2 className="h-3.5 w-3.5 text-red-500" />

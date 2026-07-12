@@ -6,8 +6,14 @@ export interface LocalRegistrant {
   id: number;
   fullName: string;
   email: string;
+  nim?: string;
+  password?: string;
   year: string;
   major: string;
+  whatsapp?: string;
+  asalDaerah?: string;
+  domisili?: string;
+  genreFoto?: string;
   status: string;
   createdAt: string;
 }
@@ -124,7 +130,21 @@ async function sbGetMembers(): Promise<LocalMember[]> {
 async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
   try {
     const { data } = await supabase.from("registrants").select("*").order("id", { ascending: true });
-    return (data || []).map((r: any) => toCamel(r));
+    return (data || []).map((r: any) => ({
+      id: r.id,
+      fullName: r.full_name,
+      email: r.email,
+      nim: r.nim,
+      password: r.password,
+      year: r.year,
+      major: r.major,
+      whatsapp: r.whatsapp,
+      asalDaerah: r.asal_daerah,
+      domisili: r.domisili,
+      genreFoto: r.genre_foto,
+      status: r.status,
+      createdAt: r.created_at,
+    }));
   } catch { return []; }
 }
 

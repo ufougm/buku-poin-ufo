@@ -5,16 +5,21 @@
 import { supabase } from "./supabaseClient";
 
 const SPREADSHEET_ID = "1_72nMq9mxTpFRjV__wSmiu0DirZ4ebbeGYjYWTCqc20";
-const SHEET_GID = "564462737"; // More reliable than sheet name
+const SHEET_GID = "564462737";
 
 // Column mapping (0-based indices) — matched to the actual form:
-// A: Timestamp | B: Email address | C: Nama Lengkap | D: NIM | E: Fakultas/Sekolah | F: Prodi
+// A: Timestamp | B: Email | C: Nama Lengkap | D: NIM | E: Fakultas/Sekolah | F: Prodi
+// G: Nomor WhatsApp | H: Asal daerah | I: Domisili saat ini | J: Genre Foto yang Disukai
 const COLUMN_MAP = {
-  email: 1,       // Column B: Email address
-  fullName: 2,    // Column C: Nama Lengkap
-  nim: 3,         // Column D: NIM
-  faculty: 4,     // Column E: Fakultas/Sekolah
-  prodi: 5,       // Column F: Prodi
+  email: 1,        // B: Email address
+  fullName: 2,     // C: Nama Lengkap
+  nim: 3,          // D: NIM
+  faculty: 4,      // E: Fakultas/Sekolah
+  prodi: 5,        // F: Prodi
+  whatsapp: 6,     // G: Nomor WhatsApp
+  asalDaerah: 7,   // H: Asal daerah
+  domisili: 8,     // I: Domisili saat ini
+  genreFoto: 9,    // J: Genre Foto yang Disukai
 };
 
 export interface SheetRegistrant {
@@ -23,6 +28,11 @@ export interface SheetRegistrant {
   nim: string;
   faculty: string;
   prodi: string;
+  whatsapp: string;
+  asalDaerah: string;
+  domisili: string;
+  genreFoto: string;
+  angkatan: string; // Derived from first 2 digits of NIM
 }
 
 export interface SyncResult {
@@ -34,10 +44,24 @@ export interface SyncResult {
 }
 
 /**
- * Fetch raw CSV data from the public Google Sheet via the gviz CSV endpoint
+ * Derive angkatan from NIM's first 2 digits
+ * e.g., "24/537646/EK/25038" → "24" → "2024"
+ */
+export function deriveAngkatanFromNIM(nim: string): string {
+  const cleanNIM = nim.replace(/\//g, "").replace(/-/g, "");
+  const firstTwo = cleanNIM.substring(0, 2);
+  if (firstTwo === "22") return "2022";
+  if (firstTwo === "23") return "2023";
+  if (firstTwo === "24") return "2024";
+  if (firstTwo === "25") return "2025";
+  if (firstTwo === "26") return "2026";
+  return "20" + firstTwo;
+}
+
+/**
+ * Fetch raw CSV data from the public Google Sheet
  */
 export async function fetchSheetData(): Promise<string> {
-  // Try gid-based URL first (most reliable)
   const urls = [
     `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`,
     `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Form%20responses%201`,
@@ -60,7 +84,7 @@ export async function fetchSheetData(): Promise<string> {
     }
   }
 
-  throw new Error(`Gagal mengambil data dari Google Spreadsheet (${lastError}). Pastikan spreadsheet diatur ke "Siapa saja yang memiliki link dapat melihat". \n\nLink: https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit`);
+  throw new Error(`Gagal mengambil data dari Google Spreadsheet (${lastError}). Pastikan spreadsheet diatur ke "Siapa saja yang memiliki link dapat melihat".`);
 }
 
 /**
@@ -75,11 +99,8 @@ export function parseSheetData(csvText: string): { registrants: SheetRegistrant[
     return { registrants: [], parseLog };
   }
 
-  parseLog.push(`Total baris di CSV: ${lines.length} (termasuk header)`);
-
-  // Log header for debugging
   const headerCols = parseCSVLine(lines[0]);
-  parseLog.push(`Header: ${headerCols.join(" | ")}`);
+  parseLog.push(`Header (${headerCols.length} kolom): ${headerCols.slice(0, 10).join(" | ")}${headerCols.length > 10 ? "..." : ""}`);
 
   if (lines.length < 2) {
     parseLog.push("Tidak ada baris data (hanya header)");
@@ -99,18 +120,11 @@ export function parseSheetData(csvText: string): { registrants: SheetRegistrant[
       const fullName = cols[COLUMN_MAP.fullName]?.trim();
       const nim = cols[COLUMN_MAP.nim]?.trim();
 
-      if (!email) {
-        parseLog.push(`Baris ${i + 1}: dilewati (email kosong)`);
-        continue;
-      }
-      if (!fullName) {
-        parseLog.push(`Baris ${i + 1}: dilewati (nama kosong)`);
-        continue;
-      }
-      if (!nim) {
-        parseLog.push(`Baris ${i + 1}: dilewati (NIM kosong)`);
-        continue;
-      }
+      if (!email) { parseLog.push(`Baris ${i + 1}: dilewati (email kosong)`); continue; }
+      if (!fullName) { parseLog.push(`Baris ${i + 1}: dilewati (nama kosong)`); continue; }
+      if (!nim) { parseLog.push(`Baris ${i + 1}: dilewati (NIM kosong)`); continue; }
+
+      const angkatan = deriveAngkatanFromNIM(nim);
 
       registrants.push({
         fullName,
@@ -118,6 +132,11 @@ export function parseSheetData(csvText: string): { registrants: SheetRegistrant[
         nim,
         faculty: cols[COLUMN_MAP.faculty]?.trim() || "",
         prodi: cols[COLUMN_MAP.prodi]?.trim() || "",
+        whatsapp: cols[COLUMN_MAP.whatsapp]?.trim() || "",
+        asalDaerah: cols[COLUMN_MAP.asalDaerah]?.trim() || "",
+        domisili: cols[COLUMN_MAP.domisili]?.trim() || "",
+        genreFoto: cols[COLUMN_MAP.genreFoto]?.trim() || "",
+        angkatan,
       });
     } catch (e: any) {
       parseLog.push(`Baris ${i + 1}: error parsing - ${e.message}`);
@@ -153,7 +172,7 @@ export async function syncRegistrantsFromSheet(): Promise<SyncResult> {
     return { added: 0, skipped: 0, errors: 0, details, fetchedCount: 0 };
   }
 
-  // Step 3: Get existing registrants from Supabase
+  // Step 3: Get existing registrants
   let existingEmails: Set<string>;
   try {
     const { data: existing, error: existingError } = await supabase.from("registrants").select("email");
@@ -185,8 +204,12 @@ export async function syncRegistrantsFromSheet(): Promise<SyncResult> {
         email: row.email,
         nim: row.nim,
         password: row.nim, // initial password = NIM
-        year: "", // Will be filled from form if available
-        major: `${row.faculty} - ${row.prodi}`.replace(/ - $/, "").replace(/^ - /, ""),
+        year: row.angkatan,
+        major: `${row.faculty}${row.prodi ? " - " + row.prodi : ""}`,
+        whatsapp: row.whatsapp,
+        asal_daerah: row.asalDaerah,
+        domisili: row.domisili,
+        genre_foto: row.genreFoto,
         status: "active",
         created_at: new Date().toISOString(),
       }]);
@@ -210,10 +233,15 @@ export async function syncRegistrantsFromSheet(): Promise<SyncResult> {
 
 /**
  * Get registrant from Supabase for login verification
+ * Login accepts either NIM (first time) or changed password
  */
 export async function getRegistrantByEmail(email: string) {
   try {
-    const { data, error } = await supabase.from("registrants").select("*").eq("email", email.toLowerCase()).single();
+    const { data, error } = await supabase
+      .from("registrants")
+      .select("*")
+      .ilike("email", email) // case-insensitive match
+      .maybeSingle(); // returns null instead of error if no match
     if (error || !data) return null;
     return {
       id: data.id,
@@ -224,6 +252,10 @@ export async function getRegistrantByEmail(email: string) {
       year: data.year,
       major: data.major,
       status: data.status,
+      whatsapp: data.whatsapp,
+      asalDaerah: data.asal_daerah,
+      domisili: data.domisili,
+      genreFoto: data.genre_foto,
     };
   } catch {
     return null;
@@ -231,11 +263,31 @@ export async function getRegistrantByEmail(email: string) {
 }
 
 /**
+ * Verify login: accepts either NIM (first time) or changed password
+ */
+export async function verifyRegistrantLogin(email: string, inputPassword: string) {
+  const registrant = await getRegistrantByEmail(email);
+  if (!registrant) return null;
+  if (registrant.status !== "active") return null;
+
+  // Accept either NIM or the changed password
+  const isNIM = inputPassword === registrant.nim;
+  const isPassword = inputPassword === registrant.password;
+
+  if (!isNIM && !isPassword) return null;
+
+  return registrant;
+}
+
+/**
  * Update registrant password
  */
 export async function updateRegistrantPassword(email: string, newPassword: string) {
   try {
-    const { error } = await supabase.from("registrants").update({ password: newPassword }).eq("email", email.toLowerCase());
+    const { error } = await supabase
+      .from("registrants")
+      .update({ password: newPassword })
+      .ilike("email", email); // case-insensitive match
     return !error;
   } catch {
     return false;
@@ -254,7 +306,6 @@ function parseCSVLine(line: string): string[] {
 
     if (char === '"') {
       if (inQuotes && nextChar === '"') {
-        // Escaped quote
         current += '"';
         i++;
       } else {

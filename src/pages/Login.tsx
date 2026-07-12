@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogIn, ArrowLeft, Loader2, Users } from "lucide-react";
 import { Link } from "react-router";
 import { seedMembers, getMemberByNSA } from "@/hooks/useLocalData";
-import { getRegistrantByEmail } from "@/lib/googleSheets";
+import { verifyRegistrantLogin } from "@/lib/googleSheets";
 
 // ─── Session Management ───────────────────────────────────────────
 interface SessionUser {
@@ -90,22 +90,10 @@ export default function Login() {
       return;
     }
 
-    // Check registrant from Google Sheets sync (Supabase)
-    const registrant = await getRegistrantByEmail(caEmail.trim());
+    // Verify registrant: accepts either NIM (first login) or changed password
+    const registrant = await verifyRegistrantLogin(caEmail.trim(), caNim.trim());
     if (!registrant) {
-      setError("Email tidak ditemukan. Pastikan Anda sudah mengisi form pendaftaran CUFO.");
-      return;
-    }
-
-    if (registrant.status !== "active") {
-      setError("Akun Anda tidak aktif. Hubungi admin PSDM.");
-      return;
-    }
-
-    // Verify password: use stored password (initially = NIM) or fallback to NIM
-    const expectedPassword = registrant.password || registrant.nim;
-    if (caNim.trim() !== expectedPassword) {
-      setError("NIM/Password salah. Password awal = NIM Anda.");
+      setError("Email atau NIM/Password salah. Password awal = NIM Anda.");
       return;
     }
 

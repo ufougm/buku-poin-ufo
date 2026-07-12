@@ -109,10 +109,16 @@ export const ACTIVITY_TYPES = [
 // ─── Supabase-only CRUD Helpers ───────────────────────────────────
 
 async function sbGetMembers(): Promise<LocalMember[]> {
+  const base = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
   try {
     const { data } = await supabase.from("members").select("*");
-    return (data || []).map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
-  } catch { return []; }
+    if (data && data.length > 0) {
+      const fromDb = data.map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
+      const existingNsas = new Set(base.map((m) => m.nsa.toLowerCase()));
+      return [...base, ...fromDb.filter((m: LocalMember) => !existingNsas.has(m.nsa.toLowerCase()))];
+    }
+  } catch { /* return pre-registered only */ }
+  return base;
 }
 
 async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
@@ -418,14 +424,35 @@ export function getLocations(): string[] {
 }
 
 export async function getMembers(): Promise<LocalMember[]> {
-  return sbGetMembers();
+  // Always include pre-registered members from memory
+  const base = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
+
+  // Try to get additional members from Supabase
+  try {
+    const { data } = await supabase.from("members").select("*");
+    if (data && data.length > 0) {
+      const fromDb = data.map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
+      // Merge: pre-registered + any extra from DB (avoid duplicates)
+      const existingNsas = new Set(base.map((m) => m.nsa.toLowerCase()));
+      return [...base, ...fromDb.filter((m: LocalMember) => !existingNsas.has(m.nsa.toLowerCase()))];
+    }
+  } catch { /* ignore, return pre-registered only */ }
+
+  return base;
 }
 
 export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefined> {
+  // Always check in-memory pre-registered list first (never lost, works offline)
+  const preReg = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
+  if (preReg) return { ...preReg, isPreRegistered: true };
+
+  // Fallback: try Supabase for dynamically added members
   try {
     const { data } = await supabase.from("members").select("*").eq("nsa", nsa).single();
-    return data ? { ...toCamel(data), isPreRegistered: true } : undefined;
-  } catch { return undefined; }
+    if (data) return { ...toCamel(data), isPreRegistered: true };
+  } catch { /* ignore */ }
+
+  return undefined;
 }
 
 export async function seedMembers() {

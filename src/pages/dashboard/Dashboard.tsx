@@ -435,7 +435,7 @@ export default function MemberDashboard() {
               <div><Label>No. Telepon</Label><Input value={regPhone} onChange={(e) => setRegPhone(e.target.value)} placeholder="08xx-xxxx-xxxx" /></div>
               <div className="flex gap-2 pt-2">
                 <Button variant="outline" className="flex-1" onClick={() => setShowRegister(false)}>Batal</Button>
-                <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleRegister} disabled={!regMajor}>Daftar</Button>
+                <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={handleRegister}>Daftar</Button>
               </div>
             </CardContent>
           </Card>

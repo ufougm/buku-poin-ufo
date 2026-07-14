@@ -536,27 +536,31 @@ export default function AdminDashboard() {
                 >
                   <div>
                     <label className="text-sm font-medium mb-2 block">Kelompok</label>
-                    <Select value={selectedKelompok} onValueChange={setSelectedKelompok}>
-                      <SelectTrigger className="w-full truncate"><SelectValue placeholder="Pilih kelompok" className="truncate" /></SelectTrigger>
-                      <SelectContent className="max-w-[90vw]">
-                        {data.kelompokData.map((k: any) => (
-                          <SelectItem key={k.id} value={k.id.toString()} className="truncate max-w-[80vw]">
-                            {k.name} ({k.pemandu1Name} & {k.pemandu2Name})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <select
+                      value={selectedKelompok}
+                      onChange={(e) => setSelectedKelompok(e.target.value)}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
+                    >
+                      <option value="">Pilih kelompok</option>
+                      {data.kelompokData.map((k: any) => (
+                        <option key={k.id} value={k.id.toString()}>
+                          {k.name} ({k.pemandu1Name} & {k.pemandu2Name})
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">CUFO (Belum Ditugaskan)</label>
-                    <Select value={selectedRegistrant} onValueChange={setSelectedRegistrant}>
-                      <SelectTrigger className="w-full truncate"><SelectValue placeholder="Pilih CUFO" className="truncate" /></SelectTrigger>
-                      <SelectContent className="max-w-[90vw]">
-                        {data.unassigned.map((r) => <SelectItem key={r.id} value={r.id.toString()} className="truncate max-w-[80vw]">{r.fullName} ({r.year})</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <select
+                      value={selectedRegistrant}
+                      onChange={(e) => setSelectedRegistrant(e.target.value)}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
+                    >
+                      <option value="">Pilih CUFO</option>
+                      {data.unassigned.map((r) => <option key={r.id} value={r.id.toString()}>{r.fullName} ({r.year})</option>)}
+                    </select>
                   </div>
-                  <Button type="submit" disabled={!selectedKelompok || !selectedRegistrant} className="bg-red-600 hover:bg-red-700"><LinkIcon className="h-4 w-4 mr-2" />Tugaskan</Button>
+                  <Button type="submit" className="bg-red-600 hover:bg-red-700"><LinkIcon className="h-4 w-4 mr-2" />Tugaskan</Button>
                 </form>
 
                 {data.pemanduStats.length > 0 && (
@@ -882,7 +886,7 @@ export default function AdminDashboard() {
                   <div><Label>Kapasitas CUFO</Label><Input type="number" value={pemanduForm.maxMentees} onChange={(e) => setPemanduForm({ ...pemanduForm, maxMentees: Number(e.target.value) })} /></div>
                   <div className="flex gap-2 pt-2">
                     <Button type="button" variant="outline" className="flex-1" onClick={() => setShowPemanduForm(false)}>Batal</Button>
-                    <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700" disabled={!pemanduForm.fullName.trim() || !pemanduForm.email.trim()}>
+                    <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
                       {editingPemandu ? "Simpan Perubahan" : "Tambah Pemandu"}
                     </Button>
                   </div>
@@ -902,17 +906,18 @@ export default function AdminDashboard() {
                   <div><Label>Nama Lengkap *</Label><Input value={verifiedForm.fullName} onChange={(e) => setVerifiedForm({ ...verifiedForm, fullName: e.target.value })} placeholder="Nama lengkap" required /></div>
                   <div><Label>Email</Label><Input type="email" value={verifiedForm.email} onChange={(e) => setVerifiedForm({ ...verifiedForm, email: e.target.value })} placeholder="email@ugm.ac.id" /></div>
                   <div><Label>Role</Label>
-                    <Select value={verifiedForm.role} onValueChange={(v) => setVerifiedForm({ ...verifiedForm, role: v as "pemandu" | "psdm" })}>
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pemandu">Pemandu</SelectItem>
-                        <SelectItem value="psdm">PSDM (Admin)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <select
+                      value={verifiedForm.role}
+                      onChange={(e) => setVerifiedForm({ ...verifiedForm, role: e.target.value as "pemandu" | "psdm" })}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
+                    >
+                      <option value="pemandu">Pemandu</option>
+                      <option value="psdm">PSDM (Admin)</option>
+                    </select>
                   </div>
                   <div className="flex gap-2 pt-2">
                     <Button type="button" variant="outline" className="flex-1" onClick={() => setShowVerifiedForm(false)}>Batal</Button>
-                    <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700" disabled={!verifiedForm.serialNumber.trim() || !verifiedForm.fullName.trim()}>
+                    <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700">
                       {editingVerified ? "Simpan Perubahan" : "Tambah"}
                     </Button>
                   </div>
@@ -939,35 +944,31 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <Label>Pemandu 1 *</Label>
-                    <Select
+                    <select
                       value={kelompokForm.pemanduId1}
-                      onValueChange={(v) => setKelompokForm({ ...kelompokForm, pemanduId1: v })}
+                      onChange={(e) => setKelompokForm({ ...kelompokForm, pemanduId1: e.target.value })}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
+                      required
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pilih pemandu" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {data.pemandus.map((p) => (
-                          <SelectItem key={p.id} value={p.id.toString()}>{p.fullName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <option value="">Pilih pemandu</option>
+                      {data.pemandus.map((p) => (
+                        <option key={p.id} value={p.id.toString()}>{p.fullName}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <Label>Pemandu 2 *</Label>
-                    <Select
+                    <select
                       value={kelompokForm.pemanduId2}
-                      onValueChange={(v) => setKelompokForm({ ...kelompokForm, pemanduId2: v })}
+                      onChange={(e) => setKelompokForm({ ...kelompokForm, pemanduId2: e.target.value })}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
+                      required
                     >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Pilih pemandu" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {data.pemandus.map((p) => (
-                          <SelectItem key={p.id} value={p.id.toString()}>{p.fullName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <option value="">Pilih pemandu</option>
+                      {data.pemandus.map((p) => (
+                        <option key={p.id} value={p.id.toString()}>{p.fullName}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="flex gap-2 pt-2">
                     <Button
@@ -981,7 +982,6 @@ export default function AdminDashboard() {
                     <Button
                       type="submit"
                       className="flex-1 bg-red-600 hover:bg-red-700"
-                      disabled={!kelompokForm.name.trim() || !kelompokForm.pemanduId1 || !kelompokForm.pemanduId2}
                     >
                       {editingKelompok ? "Simpan Perubahan" : "Tambah Kelompok"}
                     </Button>

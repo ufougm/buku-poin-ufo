@@ -267,28 +267,35 @@ export default function AdminDashboard() {
   };
 
   // ─── Kelompok CRUD Handlers ──────────────────────────────────────
+  const [kelompokSaving, setKelompokSaving] = useState(false);
+  const [kelompokError, setKelompokError] = useState("");
+
   const handleSaveKelompok = async () => {
-    if (!kelompokForm.name.trim() || !kelompokForm.pemanduId1 || !kelompokForm.pemanduId2) return;
-    if (kelompokForm.pemanduId1 === kelompokForm.pemanduId2) {
-      alert("Pemandu 1 dan Pemandu 2 harus berbeda");
-      return;
+    setKelompokError("");
+
+    if (!kelompokForm.name.trim()) { setKelompokError("Nama kelompok wajib diisi"); return; }
+    if (!kelompokForm.pemanduId1) { setKelompokError("Pemandu 1 wajib dipilih"); return; }
+    if (!kelompokForm.pemanduId2) { setKelompokError("Pemandu 2 wajib dipilih"); return; }
+    if (kelompokForm.pemanduId1 === kelompokForm.pemanduId2) { setKelompokError("Pemandu 1 dan 2 harus berbeda"); return; }
+
+    setKelompokSaving(true);
+    try {
+      const pemanduIds = [Number(kelompokForm.pemanduId1), Number(kelompokForm.pemanduId2)];
+      if (editingKelompok) {
+        await local.updateKelompok(editingKelompok.id, { name: kelompokForm.name.trim(), pemanduIds });
+      } else {
+        await local.addKelompok({ name: kelompokForm.name.trim(), pemanduIds });
+      }
+      setShowKelompokForm(false);
+      setEditingKelompok(null);
+      setKelompokForm({ name: "", pemanduId1: "", pemanduId2: "" });
+      refreshData();
+    } catch (e: any) {
+      console.error("[handleSaveKelompok] Error:", e);
+      setKelompokError(e?.message || "Gagal menyimpan kelompok. Cek koneksi database.");
+    } finally {
+      setKelompokSaving(false);
     }
-    const pemanduIds = [Number(kelompokForm.pemanduId1), Number(kelompokForm.pemanduId2)];
-    if (editingKelompok) {
-      await local.updateKelompok(editingKelompok.id, {
-        name: kelompokForm.name.trim(),
-        pemanduIds,
-      });
-    } else {
-      await local.addKelompok({
-        name: kelompokForm.name.trim(),
-        pemanduIds,
-      });
-    }
-    setShowKelompokForm(false);
-    setEditingKelompok(null);
-    setKelompokForm({ name: "", pemanduId1: "", pemanduId2: "" });
-    refreshData();
   };
 
   const handleDeleteKelompok = async (id: number) => {
@@ -933,11 +940,17 @@ export default function AdminDashboard() {
                   onSubmit={(e) => { e.preventDefault(); handleSaveKelompok(); }}
                   className="space-y-4"
                 >
+                  {/* Error display */}
+                  {kelompokError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      {kelompokError}
+                    </div>
+                  )}
                   <div>
                     <Label>Nama Kelompok *</Label>
                     <Input
                       value={kelompokForm.name}
-                      onChange={(e) => setKelompokForm({ ...kelompokForm, name: e.target.value })}
+                      onChange={(e) => { setKelompokError(""); setKelompokForm({ ...kelompokForm, name: e.target.value }); }}
                       placeholder="Contoh: Kelompok 1"
                       required
                     />
@@ -946,8 +959,8 @@ export default function AdminDashboard() {
                     <Label>Pemandu 1 *</Label>
                     <select
                       value={kelompokForm.pemanduId1}
-                      onChange={(e) => setKelompokForm({ ...kelompokForm, pemanduId1: e.target.value })}
-                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
+                      onChange={(e) => { setKelompokError(""); setKelompokForm({ ...kelompokForm, pemanduId1: e.target.value }); }}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white"
                       required
                     >
                       <option value="">Pilih pemandu</option>
@@ -960,8 +973,8 @@ export default function AdminDashboard() {
                     <Label>Pemandu 2 *</Label>
                     <select
                       value={kelompokForm.pemanduId2}
-                      onChange={(e) => setKelompokForm({ ...kelompokForm, pemanduId2: e.target.value })}
-                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
+                      onChange={(e) => { setKelompokError(""); setKelompokForm({ ...kelompokForm, pemanduId2: e.target.value }); }}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white"
                       required
                     >
                       <option value="">Pilih pemandu</option>
@@ -975,15 +988,17 @@ export default function AdminDashboard() {
                       type="button"
                       variant="outline"
                       className="flex-1"
-                      onClick={() => setShowKelompokForm(false)}
+                      onClick={() => { setKelompokError(""); setShowKelompokForm(false); }}
+                      disabled={kelompokSaving}
                     >
                       Batal
                     </Button>
                     <Button
                       type="submit"
                       className="flex-1 bg-red-600 hover:bg-red-700"
+                      disabled={kelompokSaving}
                     >
-                      {editingKelompok ? "Simpan Perubahan" : "Tambah Kelompok"}
+                      {kelompokSaving ? "Menyimpan..." : editingKelompok ? "Simpan" : "Tambah"}
                     </Button>
                   </div>
                 </form>

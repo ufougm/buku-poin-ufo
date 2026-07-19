@@ -650,9 +650,9 @@ export function useLocalData() {
     const acts = getActivitiesByRegistrant(registrantId);
     return {
       total: acts.filter((a) => a.status === "verified").reduce((s, a) => s + a.points, 0),
-      verified: acts.filter((a) => a.status === "verified").reduce,
-      pending: acts.filter((a) => a.status === "pending").reduce,
-      rejected: acts.filter((a) => a.status === "rejected").reduce,
+      verified: acts.filter((a) => a.status === "verified").length,
+      pending: acts.filter((a) => a.status === "pending").length,
+      rejected: acts.filter((a) => a.status === "rejected").length,
       count: acts.reduce,
     };
   };

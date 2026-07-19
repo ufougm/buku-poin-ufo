@@ -47,12 +47,22 @@ export default function PemanduDashboard() {
 
   // Find the pemandu record for this user from the member database
   const myPemandu = useMemo(() => {
+    // 1. Tambahkan mata-mata di sini
+    console.log("Nama Akun Login:", user?.name);
+    console.log("Daftar Pemandu di Sistem:", local.pemandus);
+
     if (!user?.name) return null;
-    // Look up pemandu by matching user's name in the real pemandu list
-    return local.pemandus.find(
+
+    // Look up pemandu by matching user's name
+    const ditemukan = local.pemandus.find(
       (m) => m.fullName.toLowerCase() === user.name!.toLowerCase()
-    ) || null;
-  }, [user]);
+    );
+
+    // 2. Lihat hasil pencocokannya
+    console.log("Hasil Pencocokan:", ditemukan);
+
+    return ditemukan || null;
+  }, [user, local.pemandus]); // Jangan lupa tambahkan local.pemandus di dalam kurung siku ini
 
   // Get CUFO for this pemandu (via kelompok or direct assignment)
   const cufos = useMemo(() => {

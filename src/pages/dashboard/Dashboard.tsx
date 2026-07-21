@@ -146,7 +146,13 @@ const summary = useMemo(() => {
     .filter((a: any) => a.status === "verified")
     .reduce((sum: number, a: any) => sum + (Number(a.points) || 0), 0); // <-- Perbaikan di baris ini
     
-  return { ...baseSummary, verified: realPoints };
+// Kembalikan semua data dengan lengkap
+  return { 
+    ...baseSummary, 
+    verified: realPoints,
+    total: myActivities.length, // <-- Ini yang akan memunculkan angkanya kembali
+    count: myActivities.length  // <-- Jaga-jaga jika UI menggunakan variabel count
+  };
 }, [myRegistrant, refreshTick, local]);
 
   const selectedType = local.activityTypes.find((t) => t.id === Number(activityTypeId));

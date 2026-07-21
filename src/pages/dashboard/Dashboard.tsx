@@ -613,7 +613,7 @@ const summary = useMemo(() => {
               </div>
               <div className="p-4 text-center">
                 <p className="text-xs text-gray-500">Total Kegiatan</p>
-                <p className="text-lg font-bold text-gray-900">{summary.count}</p>
+                <p className="text-lg font-bold text-gray-900">{activities.length}</p>
               </div>
             </div>
           </CardContent>

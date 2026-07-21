@@ -19,15 +19,21 @@ export default function Leaderboard() {
   const topFive = useMemo(() => {
     return local.registrants
       .map((r) => {
-        const summary = local.getPointSummary(r.id);
+       const rActivities = local.getActivitiesByRegistrant(r.id) || [];
+        
+        // Hitung manual poin aslinya seperti di Dashboard
+        const realPoints = rActivities
+          .filter((a: any) => a.status === "verified")
+          .reduce((sum: number, a: any) => sum + (Number(a.points) || 0), 0);
+
         return {
           id: r.id,
           name: r.fullName,
           anonymousName: anonymizeName(r.fullName),
           year: r.year,
           major: r.major,
-          verifiedPoints: summary.verified,
-          activityCount: summary.count,
+          verifiedPoints: realPoints,      // <-- Sekarang menggunakan poin asli
+          activityCount: rActivities.length, // <-- Jumlah kegiatan asli
         };
       })
       .sort((a, b) => b.verifiedPoints - a.verifiedPoints)

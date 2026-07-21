@@ -263,7 +263,14 @@ export default function PemanduDashboard() {
                             src={img}
                             alt={`Dokumentasi ${idx + 1}`}
                             className="w-full h-32 object-cover cursor-pointer hover:scale-105 transition-transform"
-                            onClick={() => window.open(img, "_blank")}
+                           onClick={() => {
+  if (img && img.startsWith("data:image")) {
+    const w = window.open("");
+    w?.document.write(`<title>Dokumentasi Kegiatan</title><body style="background-color: #0e0e0e; display: flex; justify-content: center; align-items: center; margin: 0; height: 100vh;"><img src="${img}" style="max-width: 100%; max-height: 100vh; object-fit: contain;" /></body>`);
+  } else {
+    window.open(img, "_blank");
+  }
+}}
                           />
                         </div>
                       ))}

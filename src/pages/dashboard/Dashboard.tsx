@@ -136,10 +136,18 @@ export default function MemberDashboard() {
     [myRegistrant, refreshTick, local]
   );
 
-  const summary = useMemo(
-    () => (myRegistrant ? local.getPointSummary(myRegistrant.id) : { total: 0, verified: 0, pending: 0, rejected: 0, count: 0 }),
-    [myRegistrant, refreshTick, local]
-  );
+const summary = useMemo(() => {
+  const baseSummary = myRegistrant ? local.getPointSummary(myRegistrant.id) : { total: 0, verified: 0, pending: 0, rejected: 0, count: 0 };
+  
+  // Ambil data kegiatan asli untuk menghitung total poin yang benar
+  const myActivities = myRegistrant ? local.getActivitiesByRegistrant(myRegistrant.id) : [];
+  
+  const realPoints = myActivities
+    .filter((a: any) => a.status === "verified")
+    .reduce((sum: number, a: any) => sum + (Number(a.points) || 0), 0); // <-- Perbaikan di baris ini
+    
+  return { ...baseSummary, verified: realPoints };
+}, [myRegistrant, refreshTick, local]);
 
   const selectedType = local.activityTypes.find((t) => t.id === Number(activityTypeId));
   const requiresRole = selectedType?.requiresRole === "yes";

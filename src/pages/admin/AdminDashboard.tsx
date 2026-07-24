@@ -71,7 +71,7 @@ function safeCompute(local: any) {
       activities: activities.length,
       pendingActivities: activities.filter((a: any) => a.status === "pending").length,
       verifiedActivities: activities.filter((a: any) => a.status === "verified").length,
-      totalPoints: activities.filter((a: any) => a.status === "verified").length((sum: number, a: any) => sum + a.points, 0),
+      totalPoints: activities.filter((a: any) => a.status === "verified").reduce((sum: number, a: any) => sum + a.points, 0),
       pemanduAssignments: assignments.length,
     };
 

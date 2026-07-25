@@ -132,8 +132,10 @@ export default function Profile() {
     // Apply changes based on user type
     if (user.isPreRegistered) {
       // Pre-registered member: update member DB
-      const membersData = getMembers();
-      // Gunakan optional chaining (?.) atau pengecekan array sebelum .find()
+      
+      // TAMBAHKAN KATA await DI BARIS INI 👇
+      const membersData = await getMembers(); 
+      
       const member = Array.isArray(membersData) ? membersData.find((m) => m.nsa === user.id) : null;
       
       if (member) {
@@ -146,10 +148,14 @@ export default function Profile() {
             setError("Password saat ini salah.");
             return;
           }
+          // Pastikan baris ini juga menggunakan await
           await updateMember(user.id, { password: newPassword });
         }
+      } else {
+        setError("Gagal memuat data pengguna. Silakan coba lagi.");
+        return;
       }
-    } else if (user.role === "user" && user.email) {
+    }
       // Calon Anggota (from Google Sheets): password stored in Supabase registrants table
       if (trimmedUsername !== user.id) {
         setError("Calon Anggota tidak dapat mengubah ID. Hanya password yang dapat diubah.");

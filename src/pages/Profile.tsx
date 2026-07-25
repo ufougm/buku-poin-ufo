@@ -146,7 +146,7 @@ export default function Profile() {
             setError("Password saat ini salah.");
             return;
           }
-          updateMember(user.id, { password: newPassword });
+          await updateMember(user.id, { password: newPassword });
         }
       }
     } else if (user.role === "user" && user.email) {

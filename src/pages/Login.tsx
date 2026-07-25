@@ -8,6 +8,7 @@ import { LogIn, ArrowLeft, Loader2, Users } from "lucide-react";
 import { Link } from "react-router";
 import { seedMembers, getMemberByNSA } from "@/hooks/useLocalData";
 import { verifyRegistrantLogin } from "@/lib/googleSheets";
+import { verifyMemberLogin } from "@/hooks/useLocalData";
 
 // ─── Session Management ───────────────────────────────────────────
 interface SessionUser {
@@ -49,8 +50,33 @@ export default function Login() {
   const [error, setError] = useState("");
 
   // ─── Login: Anggota (NSA-based) ─────────────────────────────────
-  const handleAnggotaLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Pastikan Anda sudah import fungsinya di baris paling atas Login.tsx
+// import { verifyMemberLogin } from "@/hooks/useLocalData";
+
+const handleAnggotaLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  // ... (set loading true dan reset error jika ada) ...
+
+  // PANGGIL FUNGSI VERIFIKASI KE SUPABASE DI SINI
+  // Gunakan state nsaUsername dan nsaPassword milik Anda
+  const user = await verifyMemberLogin(nsaUsername, nsaPassword);
+
+  if (user) {
+    // BERHASIL LOGIN
+    // Simpan data user ke local storage sebagai penanda sesi login
+    localStorage.setItem("ukm_session_user", JSON.stringify(user));
+    
+    // Arahkan (redirect) ke halaman dashboard. 
+    // Sesuaikan ini jika Anda menggunakan react-router (misal: navigate('/dashboard'))
+    window.location.href = "/dashboard"; 
+  } else {
+    // GAGAL LOGIN
+    // Tampilkan pesan error (sesuaikan dengan state error yang Anda miliki)
+    // setError("Password salah atau NSA tidak ditemukan.");
+  }
+
+  // ... (set loading false) ...
+};
     setError("");
 
     if (!nsaUsername.trim() || !nsaPassword.trim()) {

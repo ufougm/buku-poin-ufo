@@ -54,56 +54,31 @@ export default function Login() {
 // import { verifyMemberLogin } from "@/hooks/useLocalData";
 
 const handleAnggotaLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  // ... (set loading true dan reset error jika ada) ...
+    e.preventDefault();
 
-  // PANGGIL FUNGSI VERIFIKASI KE SUPABASE DI SINI
-  // Gunakan state nsaUsername dan nsaPassword milik Anda
-  const user = await verifyMemberLogin(nsaUsername, nsaPassword);
-
-  if (user) {
-    // BERHASIL LOGIN
-    // Simpan data user ke local storage sebagai penanda sesi login
-    localStorage.setItem("ukm_session_user", JSON.stringify(user));
-    
-    // Arahkan (redirect) ke halaman dashboard. 
-    // Sesuaikan ini jika Anda menggunakan react-router (misal: navigate('/dashboard'))
-    window.location.href = "/dashboard"; 
-  } else {
-    // GAGAL LOGIN
-    // Tampilkan pesan error (sesuaikan dengan state error yang Anda miliki)
-    // setError("Password salah atau NSA tidak ditemukan.");
-  }
-
-  // ... (set loading false) ...
-};
-    setError("");
-
+    // 1. Validasi input kosong (dari kode lama Anda)
     if (!nsaUsername.trim() || !nsaPassword.trim()) {
       setError("Username dan password wajib diisi");
       return;
     }
 
-    // Try 1: Pre-registered member by NSA
-    const member = await getMemberByNSA(nsaUsername.trim());
-    if (member) {
-      if (member.password !== nsaPassword) {
-        setError("Password salah.");
-        return;
-      }
-      setLoading(true);
-      setSession({
-        id: member.nsa,
-        name: member.name,
-        role: member.role,
-        angkatan: member.angkatan,
-        divisi: member.divisi,
-        isPreRegistered: true,
-      });
-      return;
+    // 2. Set loading dan bersihkan pesan error
+    setLoading(true);
+    setError("");
+
+    // 3. Verifikasi ke Supabase menggunakan fungsi baru
+    const user = await verifyMemberLogin(nsaUsername.trim(), nsaPassword);
+
+    if (user) {
+      // BERHASIL LOGIN
+      localStorage.setItem("ukm_session_user", JSON.stringify(user));
+      window.location.href = "/dashboard";
+    } else {
+      // GAGAL LOGIN
+      setError("Password salah atau NSA tidak ditemukan.");
     }
 
-    setError("NSA tidak ditemukan. Pastikan NSA Anda benar.");
+    setLoading(false);
   };
 
   // ─── Login: Calon Anggota (Email + NIM) ─────────────────────────

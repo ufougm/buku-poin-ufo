@@ -62,7 +62,8 @@ export default function Profile() {
     }
     // Check pre-registered members (NSA)
     const members = getMembers();
-    if (members.some((m) => m.nsa.toLowerCase() === u && m.nsa.toLowerCase() !== excludeCurrentId.toLowerCase())) {
+    // Tambahkan pengecekan Array.isArray() sebelum memanggil .some()
+    if (Array.isArray(members) && members.some((m) => m.nsa.toLowerCase() === u && m.nsa.toLowerCase() !== excludeCurrentId.toLowerCase())) {
       return true;
     }
     return false;
@@ -131,7 +132,10 @@ export default function Profile() {
     // Apply changes based on user type
     if (user.isPreRegistered) {
       // Pre-registered member: update member DB
-      const member = getMembers().find((m) => m.nsa === user.id);
+      const membersData = getMembers();
+      // Gunakan optional chaining (?.) atau pengecekan array sebelum .find()
+      const member = Array.isArray(membersData) ? membersData.find((m) => m.nsa === user.id) : null;
+      
       if (member) {
         if (trimmedUsername !== user.id) {
           setError("Anggota terdaftar tidak dapat mengubah NSA. Hanya password yang dapat diubah.");

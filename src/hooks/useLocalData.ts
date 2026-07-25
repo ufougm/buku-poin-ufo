@@ -656,30 +656,7 @@ export function useLocalData() {
       count: acts.reduce,
     };
   };
-// Tambahkan di bagian paling bawah useLocalData.ts
-export async function verifyMemberLogin(nsa: string, passwordInput: string) {
-  try {
-    const { data: member, error } = await supabase
-      .from("members")
-      .select("*")
-      .eq("nsa", nsa)
-      .single();
 
-    if (error || !member) {
-      return false; // User tidak ditemukan atau error
-    }
-
-    // Cocokkan password dari Supabase dengan yang diketik user
-    if (member.password === passwordInput) {
-      return member; // Login sukses, kembalikan data user
-    }
-
-    return false; // Password salah
-  } catch (err) {
-    console.error("Gagal verifikasi login:", err);
-    return false;
-  }
-};
   return {
     version,
     refresh,
@@ -728,3 +705,27 @@ export async function verifyMemberLogin(nsa: string, passwordInput: string) {
     getPointSummary,
   };
 }
+// Tambahkan di bagian paling bawah useLocalData.ts
+export async function verifyMemberLogin(nsa: string, passwordInput: string) {
+  try {
+    const { data: member, error } = await supabase
+      .from("members")
+      .select("*")
+      .eq("nsa", nsa)
+      .single();
+
+    if (error || !member) {
+      return false; // User tidak ditemukan atau error
+    }
+
+    // Cocokkan password dari Supabase dengan yang diketik user
+    if (member.password === passwordInput) {
+      return member; // Login sukses, kembalikan data user
+    }
+
+    return false; // Password salah
+  } catch (err) {
+    console.error("Gagal verifikasi login:", err);
+    return false;
+  }
+};

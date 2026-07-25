@@ -155,7 +155,7 @@ export default function Profile() {
         setError("Gagal memuat data pengguna. Silakan coba lagi.");
         return;
       }
-    }
+    } else if (user.role === "user" && user.email) {
       // Calon Anggota (from Google Sheets): password stored in Supabase registrants table
       if (trimmedUsername !== user.id) {
         setError("Calon Anggota tidak dapat mengubah ID. Hanya password yang dapat diubah.");

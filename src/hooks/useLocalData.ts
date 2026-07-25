@@ -436,7 +436,30 @@ export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & 
 }
 
 export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
-  await sbUpdateMember(nsa, updates);
+  // 1. Coba lakukan update dulu ke Supabase
+  const { data, error } = await supabase
+    .from("members")
+    .update(updates)
+    .eq("nsa", nsa)
+    .select();
+
+  // 2. JIKA GAGAL/KOSONG (berarti akun ini belum tersimpan di Supabase)
+  if (!data || data.length === 0) {
+    // Cari data aslinya di memori lokal (PRE_REGISTERED_MEMBERS)
+    const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa === nsa);
+    
+    if (localMember) {
+      // Masukkan akun ini sebagai baris baru ke Supabase beserta password barunya!
+      await supabase.from("members").insert([{
+        nsa: localMember.nsa,
+        name: localMember.name,
+        role: localMember.role,
+        angkatan: localMember.angkatan,
+        divisi: localMember.divisi,
+        password: updates.password || localMember.password,
+      }]);
+    }
+  }
 }
 
 export function getLocations(): string[] {

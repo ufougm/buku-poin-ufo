@@ -166,7 +166,7 @@ export default function Profile() {
       }
     } else {
       // Free signup user: can change both username and password
-      const freeUser = getFreeUsers().find((u: any) => u.username.toLowerCase() === user.id.toLowerCase());
+      const freeUser = (getFreeUsers() || []).find((u: any) => u.username.toLowerCase() === user.id.toLowerCase());
       if (!freeUser) {
         setError("Data pengguna tidak ditemukan.");
         return;

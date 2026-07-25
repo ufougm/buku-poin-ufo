@@ -56,25 +56,30 @@ export default function Login() {
 const handleAnggotaLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Validasi input kosong (dari kode lama Anda)
+    // 1. Validasi agar input tidak kosong
     if (!nsaUsername.trim() || !nsaPassword.trim()) {
       setError("Username dan password wajib diisi");
       return;
     }
 
-    // 2. Set loading dan bersihkan pesan error
     setLoading(true);
     setError("");
 
-    // 3. Verifikasi ke Supabase menggunakan fungsi baru
-    const user = await verifyMemberLogin(nsaUsername.trim(), nsaPassword);
+    // 2. AMBIL DATA DARI SUPABASE (Baris ini yang terlewat di kode Anda)
+    const member = await verifyMemberLogin(nsaUsername.trim(), nsaPassword);
 
-    if (user) {
-      // BERHASIL LOGIN
-      localStorage.setItem("ukm_session_user", JSON.stringify(user));
-      window.location.href = "/dashboard";
+    if (member) {
+      // 3. BERHASIL LOGIN: Cukup gunakan setSession (seperti Calon Anggota)
+      setSession({
+        id: member.nsa,
+        name: member.name,
+        role: member.role,
+        angkatan: member.angkatan,
+        divisi: member.divisi,
+        isPreRegistered: true,
+      });
     } else {
-      // GAGAL LOGIN
+      // 4. GAGAL LOGIN
       setError("Password salah atau NSA tidak ditemukan.");
     }
 

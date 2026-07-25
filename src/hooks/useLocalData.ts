@@ -436,21 +436,22 @@ export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & 
 }
 
 export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
-  // 1. Coba lakukan update dulu ke Supabase
+  console.log("Mencoba update ke Supabase untuk:", nsa);
   const { data, error } = await supabase
     .from("members")
     .update(updates)
     .eq("nsa", nsa)
     .select();
 
-  // 2. JIKA GAGAL/KOSONG (berarti akun ini belum tersimpan di Supabase)
+  if (error) {
+    console.error("ERROR SUPABASE (UPDATE):", error);
+  }
+
   if (!data || data.length === 0) {
-    // Cari data aslinya di memori lokal (PRE_REGISTERED_MEMBERS)
+    console.log("Data tidak ada, mencoba INSERT baris baru...");
     const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa === nsa);
-    
     if (localMember) {
-      // Masukkan akun ini sebagai baris baru ke Supabase beserta password barunya!
-      await supabase.from("members").insert([{
+      const { error: insertError } = await supabase.from("members").insert([{
         nsa: localMember.nsa,
         name: localMember.name,
         role: localMember.role,
@@ -458,6 +459,7 @@ export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
         divisi: localMember.divisi,
         password: updates.password || localMember.password,
       }]);
+      if (insertError) console.error("ERROR SUPABASE (INSERT):", insertError);
     }
   }
 }
@@ -731,29 +733,32 @@ export function useLocalData() {
 // Tambahkan di bagian paling bawah useLocalData.ts
 export async function verifyMemberLogin(nsa: string, passwordInput: string) {
   try {
-    // 1. PRIORITAS UTAMA: Cek di Supabase (untuk yang sudah update profil)
+    console.log("Mencoba login untuk:", nsa);
+    // Menggunakan .ilike agar NSA.123 sama dengan nsa.123
     const { data: member, error } = await supabase
       .from("members")
       .select("*")
-      .eq("nsa", nsa)
-      .maybeSingle(); // Pakai maybeSingle agar tidak error jika data belum ada
+      .ilike("nsa", nsa) 
+      .maybeSingle();
+
+    if (error) {
+      console.error("ERROR SUPABASE (LOGIN):", error);
+    }
 
     if (member) {
-      // Jika data ditemukan di Supabase, cocokkan passwordnya
+      console.log("Data ditemukan di Supabase:", member);
       if (member.password === passwordInput) return member;
+      console.log("Tapi password salah!");
       return false; 
     }
 
-    // 2. RENCANA CADANGAN: Cek di file lokal (untuk yang masih pakai password default)
-    const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa === nsa);
-    
+    console.log("Cek data lokal sebagai cadangan...");
+    const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa.toLowerCase() === nsa.toLowerCase());
     if (localMember) {
-      // Cocokkan dengan password bawaan
       if (localMember.password === passwordInput) return localMember;
-      return false;
     }
 
-    return false; // Benar-benar tidak ditemukan di mana pun
+    return false;
   } catch (err) {
     console.error("Gagal verifikasi login:", err);
     return false;

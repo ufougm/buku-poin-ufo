@@ -731,24 +731,31 @@ export function useLocalData() {
 // Tambahkan di bagian paling bawah useLocalData.ts
 export async function verifyMemberLogin(nsa: string, passwordInput: string) {
   try {
+    // 1. PRIORITAS UTAMA: Cek di Supabase (untuk yang sudah update profil)
     const { data: member, error } = await supabase
       .from("members")
       .select("*")
       .eq("nsa", nsa)
-      .single();
+      .maybeSingle(); // Pakai maybeSingle agar tidak error jika data belum ada
 
-    if (error || !member) {
-      return false; // User tidak ditemukan atau error
+    if (member) {
+      // Jika data ditemukan di Supabase, cocokkan passwordnya
+      if (member.password === passwordInput) return member;
+      return false; 
     }
 
-    // Cocokkan password dari Supabase dengan yang diketik user
-    if (member.password === passwordInput) {
-      return member; // Login sukses, kembalikan data user
+    // 2. RENCANA CADANGAN: Cek di file lokal (untuk yang masih pakai password default)
+    const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa === nsa);
+    
+    if (localMember) {
+      // Cocokkan dengan password bawaan
+      if (localMember.password === passwordInput) return localMember;
+      return false;
     }
 
-    return false; // Password salah
+    return false; // Benar-benar tidak ditemukan di mana pun
   } catch (err) {
     console.error("Gagal verifikasi login:", err);
     return false;
   }
-};
+}

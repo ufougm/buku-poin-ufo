@@ -758,6 +758,16 @@ export async function verifyMemberLogin(nsa: string, passwordInput: string) {
       if (localMember.password === passwordInput) return localMember;
     }
 
+    if (member) {
+      // TAMBAHKAN BARIS INI UNTUK MELIHAT PERBEDAANNYA
+      console.log(`[CEK] Password di DB: "${member.password}" | Yang diketik: "${passwordInput}"`);
+
+      if (member.password === passwordInput) return member;
+      
+      console.log("Tapi password salah!");
+      return false; 
+    }
+
     return false;
   } catch (err) {
     console.error("Gagal verifikasi login:", err);

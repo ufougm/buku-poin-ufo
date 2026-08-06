@@ -71,9 +71,11 @@ export default function MemberDashboard() {
   // Activity form state
   const [formOpen, setFormOpen] = useState(false);
   const [activityName, setActivityName] = useState("");
-  const pemandus = (myRegistrant && local.getPemandusForRegistrant) ? local.getPemandusForRegistrant(local.myRegistrant.id) : [];
-  const pemandu1 = pemandus[0] || null;
-  const pemandu2 = pemandus[1] || null;
+  const pemandus = (myRegistrant && myRegistrant.id && local.getPemandusForRegistrant) 
+    ? local.getPemandusForRegistrant(myRegistrant.id) 
+    : [];
+  const pemandu1 = pemandus ? pemandus[0] : null;
+  const pemandu2 = pemandus ? pemandus[1] : null;
   const [customPoints, setCustomPoints] = useState<number | "">("");
   const [activityDate, setActivityDate] = useState("");
   const [activityDateEnd, setActivityDateEnd] = useState("");

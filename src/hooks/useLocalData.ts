@@ -689,8 +689,6 @@ export function useLocalData() {
     addKelompok,
     updateKelompok,
     deleteKelompok,
-    addLocation,
-    deleteLocation,
     // Pemandu CRUD
     addPemandu,
     updatePemandu,

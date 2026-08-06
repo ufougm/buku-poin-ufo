@@ -496,7 +496,7 @@ const summary = useMemo(() => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {activityTypeId === 'ID_KEGIATAN_LAIN' && (
+                    {activityTypeId === '24' && (
   <div className="mt-3 p-3 border border-red-200 bg-red-50/50 rounded-md space-y-2">
     <Label className="text-red-700 font-semibold">Jumlah Poin Ajuan Mandiri</Label>
     <Input

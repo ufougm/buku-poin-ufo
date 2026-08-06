@@ -62,6 +62,7 @@ export default function MemberDashboard() {
   // Activity form state
   const [formOpen, setFormOpen] = useState(false);
   const [activityName, setActivityName] = useState("");
+  const [customPoints, setCustomPoints] = useState<number | "">("");
   const [activityDate, setActivityDate] = useState("");
   const [activityDateEnd, setActivityDateEnd] = useState("");
   const [activityTypeId, setActivityTypeId] = useState("");
@@ -225,7 +226,7 @@ const summary = useMemo(() => {
         role: requiresRole ? role : undefined,
         location,
         documentationImages: uploadedImages.length > 0 ? uploadedImages : undefined,
-        points: selectedType?.points || 0,
+        points: activityTypeId === '24' ? Number(customPoints) : (selectedType?.points || 0),
         status: "pending",
       });
       setFormOpen(false);
@@ -238,6 +239,7 @@ const summary = useMemo(() => {
 
   const resetForm = () => {
     setActivityName("");
+    setCustomPoints("");
     setActivityDate("");
     setActivityDateEnd("");
     setActivityTypeId("");
@@ -494,6 +496,23 @@ const summary = useMemo(() => {
                         ))}
                       </SelectContent>
                     </Select>
+                    {activityTypeId === 'ID_KEGIATAN_LAIN' && (
+  <div className="mt-3 p-3 border border-red-200 bg-red-50/50 rounded-md space-y-2">
+    <Label className="text-red-700 font-semibold">Jumlah Poin Ajuan Mandiri</Label>
+    <Input
+      type="number"
+      min="1"
+      placeholder="Masukkan jumlah poin (contoh: 10)"
+      value={customPoints}
+      onChange={(e) => setCustomPoints(e.target.value)}
+      className="bg-white border-red-200 focus:ring-red-500"
+      required
+    />
+    <p className="text-xs text-red-600 italic">
+      *Silakan isi poin yang wajar. Admin akan mengevaluasi ajuan ini.
+    </p>
+  </div>
+)}
                   </div>
                   {requiresRole && (
                     <div>

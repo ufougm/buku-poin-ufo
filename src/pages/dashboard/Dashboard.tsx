@@ -64,14 +64,14 @@ const formatWaLink = (phone: string | undefined) => {
 export default function MemberDashboard() {
   const { user, isUser, isLoading } = useAuth();
   const local = useLocalData();
-  const pemandus = (local.myRegistrant && local.getPemandusForRegistrant) ? local.getPemandusForRegistrant(local.myRegistrant.id) : [];
+  const pemandus = (myRegistrant && local.getPemandusForRegistrant) ? local.getPemandusForRegistrant(local.myRegistrant.id) : [];
   const pemandu1 = pemandus[0] || null;
   const pemandu2 = pemandus[1] || null;
   const [myRegistrant, setMyRegistrant] = useState<LocalRegistrant | null>(null);
   const [showRegister, setShowRegister] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
-console.log("Cek Data Pemandu:", pemandus, "Data User:", local.myRegistrant); 
+console.log("Cek Data Pemandu:", pemandus, "Data User:", myRegistrant);
 
   // Activity form state
   const [formOpen, setFormOpen] = useState(false);

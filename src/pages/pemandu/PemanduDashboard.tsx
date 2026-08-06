@@ -216,6 +216,28 @@ export default function PemanduDashboard() {
                               </div>
                             </div>
                           </div>
+                         {(() => {
+  // Memanggil fungsi getPointSummary dari hook useLocalData
+  const summary = local.getPointSummary(cufo.registrantId);
+  const points = summary ? summary.total : 0; 
+  const maxPoints = 100;
+  const progressPercentage = Math.min((points / maxPoints) * 100, 100);
+
+  return (
+    <div className="mt-4 border-t border-gray-100 pt-4">
+      <div className="flex justify-between items-center mb-1 text-xs">
+        <span className="font-medium text-gray-600">Progres Poin</span>
+        <span className="font-bold text-red-600">{points} / {maxPoints}</span>
+      </div>
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div
+          className="bg-red-600 h-2 rounded-full transition-all duration-500 ease-out"
+          style={{ width: `${progressPercentage}%` }}
+        ></div>
+      </div>
+    </div>
+  );
+})()}
                         </CardContent>
                       </Card>
                     ))}

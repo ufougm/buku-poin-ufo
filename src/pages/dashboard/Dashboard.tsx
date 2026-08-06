@@ -52,6 +52,19 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import MotivationalToast from "@/components/MotivationalToast";
 
+const formatWaLink = (phone: string | undefined) => {
+  if (!phone) return "#";
+  let cleanPhone = phone.replace(/\D/g, ""); 
+  if (cleanPhone.startsWith("0")) {
+    cleanPhone = "62" + cleanPhone.substring(1);
+  }
+  return `https://wa.me/${cleanPhone}`;
+};
+
+const pemandus = local.myRegistrant ? local.getPemandusForRegistrant(local.myRegistrant.id) : [];
+const pemandu1 = pemandus[0] || null;
+const pemandu2 = pemandus[1] || null;
+
 export default function MemberDashboard() {
   const { user, isUser, isLoading } = useAuth();
   const local = useLocalData();
@@ -641,6 +654,51 @@ const summary = useMemo(() => {
             </div>
           </CardContent>
         </Card>
+
+{(pemandu1 || pemandu2) && (
+  <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mt-6 mb-8">
+    <h3 className="text-lg font-bold text-gray-800 mb-4">Pemandu Kelompok Anda</h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      {/* Kartu Pemandu 1 */}
+      {pemandu1 && (
+        <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50/50 hover:shadow-md transition-shadow">
+          <div>
+            <p className="font-semibold text-gray-800">{pemandu1.fullName}</p>
+            <p className="text-xs text-gray-500">Pemandu 1</p>
+          </div>
+          <a 
+            href={formatWaLink(pemandu1.phone)} 
+            target="_blank" 
+            rel="noreferrer"
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            Chat WA
+          </a>
+        </div>
+      )}
+
+      {/* Kartu Pemandu 2 */}
+      {pemandu2 && (
+        <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50/50 hover:shadow-md transition-shadow">
+          <div>
+            <p className="font-semibold text-gray-800">{pemandu2.fullName}</p>
+            <p className="text-xs text-gray-500">Pemandu 2</p>
+          </div>
+          <a 
+            href={formatWaLink(pemandu2.phone)} 
+            target="_blank" 
+            rel="noreferrer"
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            Chat WA
+          </a>
+        </div>
+      )}
+
+    </div>
+  </div>
+)}
 
         {/* Activities Table */}
         <Card>

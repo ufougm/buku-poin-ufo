@@ -61,7 +61,7 @@ const formatWaLink = (phone: string | undefined) => {
   return `https://wa.me/${cleanPhone}`;
 };
 
-const pemandus = local.myRegistrant ? local.getPemandusForRegistrant(local.myRegistrant.id) : [];
+const pemandus = (local.myRegistrant && local.getPemandusForRegistrant) ? local.getPemandusForRegistrant(local.myRegistrant.id) : [];
 const pemandu1 = pemandus[0] || null;
 const pemandu2 = pemandus[1] || null;
 

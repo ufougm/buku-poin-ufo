@@ -50,7 +50,6 @@ import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import LocationSuggest from "@/components/LocationSuggest";
 import MotivationalToast from "@/components/MotivationalToast";
 
 export default function MemberDashboard() {
@@ -508,7 +507,12 @@ const summary = useMemo(() => {
                   </div>
                   <div>
                     <Label>Lokasi</Label>
-                    <LocationSuggest value={location} onChange={setLocation} />
+                    <Input 
+  type="text" 
+  value={location} 
+  onChange={(e) => setLocation(e.target.value)} 
+  placeholder="Ketik lokasi kegiatan (Contoh: Malioboro)" 
+/>
                   </div>
 
                   {/* Photo Upload */}

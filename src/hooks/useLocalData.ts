@@ -277,14 +277,6 @@ async function sbUpdateMember(nsa: string, updates: Partial<LocalMember>) {
   await supabase.from("members").update(payload).eq("nsa", nsa);
 }
 
-async function sbAddLocation(name: string) {
-  await supabase.from("locations").insert([{ name }]).select();
-}
-
-async function sbDeleteLocation(name: string) {
-  await supabase.from("locations").delete().eq("name", name);
-}
-
 // ─── Standalone Pemandu CRUD (admin-managed pemandus not in members) ──
 interface StandalonePemandu {
   id: number;
@@ -632,16 +624,6 @@ export function useLocalData() {
 
   const deleteKelompok = async (id: number) => {
     await sbDeleteKelompok(id);
-    refresh();
-  };
-
-  const addLocation = async (name: string) => {
-    await sbAddLocation(name);
-    refresh();
-  };
-
-  const deleteLocation = async (name: string) => {
-    await sbDeleteLocation(name);
     refresh();
   };
 

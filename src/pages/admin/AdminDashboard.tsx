@@ -143,7 +143,6 @@ export default function AdminDashboard() {
   const [editingPemandu, setEditingPemandu] = useState<any>(null);
   const [editingVerified, setEditingVerified] = useState<any>(null);
   const [editingKelompok, setEditingKelompok] = useState<any>(null);
-  const [newLocation, setNewLocation] = useState("");
   const [pemanduForm, setPemanduForm] = useState({ fullName: "", email: "", expertise: "", maxMentees: 10 });
   const [verifiedForm, setVerifiedForm] = useState({ serialNumber: "", fullName: "", email: "", role: "pemandu" as "pemandu" | "psdm" });
   const [kelompokForm, setKelompokForm] = useState({ name: "", pemanduId1: "", pemanduId2: "" });
@@ -245,18 +244,6 @@ export default function AdminDashboard() {
   const handleDeleteVerified = async (serialNumber: string) => {
     await local.deleteVerifiedMember(serialNumber);
     setDeleteConfirm(null);
-    refreshData();
-  };
-
-  const handleAddLocation = async () => {
-    if (!newLocation.trim()) return;
-    await local.addLocation(newLocation.trim());
-    setNewLocation("");
-    refreshData();
-  };
-
-  const handleDeleteLocation = async (name: string) => {
-    await local.deleteLocation(name);
     refreshData();
   };
 
@@ -659,7 +646,6 @@ export default function AdminDashboard() {
                 { key: "kelompok", label: "Kelompok", icon: UserCircle },
                 { key: "pemandu", label: "Pemandu", icon: Users },
                 { key: "verified", label: "Anggota Terverifikasi", icon: Shield },
-                { key: "locations", label: "Lokasi", icon: MapPin },
                 { key: "registrants", label: "Calon Anggota", icon: Users },
               ].map((t) => (
                 <Button
@@ -798,32 +784,6 @@ export default function AdminDashboard() {
                         ))}
                       </TableBody>
                     </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ─── Locations Management ─── */}
-            {dmTab === "locations" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" />Daftar Lokasi</CardTitle>
-                  <CardDescription>Kelola lokasi yang muncul di autocomplete saat input kegiatan</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-2">
-                    <Input value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder="Nama lokasi baru..." onKeyDown={(e) => e.key === "Enter" && handleAddLocation()} />
-                    <Button onClick={handleAddLocation} className="bg-red-600 hover:bg-red-700"><Plus className="h-4 w-4 mr-1" />Tambah</Button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {local.locations.map((loc) => (
-                      <div key={loc} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-                        <span className="text-sm truncate pr-2">{loc}</span>
-                        <button onClick={() => handleDeleteLocation(loc)} className="text-gray-400 hover:text-red-500 shrink-0">
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
                   </div>
                 </CardContent>
               </Card>

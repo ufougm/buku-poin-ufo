@@ -296,6 +296,7 @@ export async function addPemandu(data: { userId: number; fullName: string; email
     email: data.email,
     expertise: data.expertise,
     max_mentees: data.maxMentees,
+    phone: data.phone,
     created_at: new Date().toISOString(),
   }]);
   if (error) throw error;
@@ -307,6 +308,7 @@ export async function updatePemandu(id: number, updates: Partial<StandalonePeman
   if (updates.email !== undefined) payload.email = updates.email;
   if (updates.expertise !== undefined) payload.expertise = updates.expertise;
   if (updates.maxMentees !== undefined) payload.max_mentees = updates.maxMentees;
+  if (updates.phone !== undefined) payload.max_mentees = updates.phone;
   const { error } = await supabase.from("standalone_pemandus").update(payload).eq("id", id);
   if (error) throw error;
 }

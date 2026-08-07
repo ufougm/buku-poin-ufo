@@ -25,6 +25,7 @@ export interface LocalPemandu {
   email: string;
   expertise?: string;
   maxMentees: number;
+  phone?: string;
   status: "active" | "inactive";
 }
 
@@ -289,7 +290,7 @@ interface StandalonePemandu {
   createdAt: string;
 }
 
-export async function addPemandu(data: { userId: number; fullName: string; email: string; expertise: string; maxMentees: number }) {
+export async function addPemandu(data: { userId: number; fullName: string; email: string; expertise: string; maxMentees: number; phone?: string }) {
   const { error } = await supabase.from("standalone_pemandus").insert([{
     full_name: data.fullName,
     email: data.email,
@@ -425,6 +426,7 @@ export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & 
       nsa: m.nsa,
       expertise: `${m.divisi} (Angkatan ${m.angkatan})`,
       maxMentees: 10,
+      phone: m.phone,
       status: "active" as const,
     }));
 }
@@ -516,6 +518,7 @@ export function getPsdmMembers(members: LocalMember[]): LocalPemandu[] {
       email: m.email || m.nsa,
       expertise: `${m.divisi} (Angkatan ${m.angkatan})`,
       maxMentees: 10,
+      phone: m.phone,
       status: "active" as const,
     }));
 }

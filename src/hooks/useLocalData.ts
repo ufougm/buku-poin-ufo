@@ -133,6 +133,7 @@ async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
     return (data || []).map((r: any) => ({
       id: r.id,
       fullName: r.full_name,
+      phone: r.phone
       email: r.email,
       nim: r.nim,
       password: r.password,
@@ -284,6 +285,7 @@ interface StandalonePemandu {
   email: string;
   expertise: string;
   maxMentees: number;
+  phone?: string;
   createdAt: string;
 }
 

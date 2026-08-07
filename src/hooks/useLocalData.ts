@@ -133,7 +133,7 @@ async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
     return (data || []).map((r: any) => ({
       id: r.id,
       fullName: r.full_name,
-      phone: r.phone
+      phone: r.phone,
       email: r.email,
       nim: r.nim,
       password: r.password,

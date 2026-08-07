@@ -85,7 +85,7 @@ export default function MemberDashboard() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadError, setUploadError] = useState("");
 
-console.log("Cek Data Pemandu:", pemandus, "Data User:", myRegistrant);
+console.log("BONGKAR DATA:", JSON.stringify(pemandus, null, 2));
 
   // Image compression utility
   const compressImage = (file: File, maxWidth = 800, quality = 0.6): Promise<string> => {

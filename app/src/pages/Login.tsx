@@ -137,7 +137,7 @@ const handleAnggotaLogin = async (e: React.FormEvent) => {
 
             <Tabs defaultValue="anggota" onValueChange={() => setError("")}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="anggota">Anggota</TabsTrigger>
+                <TabsTrigger value="anggota">Pemandu</TabsTrigger>
                 <TabsTrigger value="calon">CUFO</TabsTrigger>
               </TabsList>
 

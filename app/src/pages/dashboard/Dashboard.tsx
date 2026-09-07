@@ -427,9 +427,9 @@ const summary = useMemo(() => {
         <div className="max-w-2xl mx-auto px-4 py-12">
           <Card className="text-center p-8">
             <UserPlus className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Daftar sebagai Calon Anggota</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Daftar sebagai CUFO</h2>
             <p className="text-gray-600 mb-6">
-              Anda belum terdaftar sebagai calon anggota. Daftarkan diri Anda untuk mulai menginput kegiatan dan melihat poin.
+              Anda belum terdaftar sebagai CUFO. Daftarkan diri Anda untuk mulai menginput kegiatan dan melihat poin.
             </p>
             <Button onClick={() => setShowRegister(true)} className="bg-red-600 hover:bg-red-700">
               <UserPlus className="h-4 w-4 mr-2" />
@@ -447,7 +447,7 @@ const summary = useMemo(() => {
         <div className="max-w-lg mx-auto px-4 py-8">
           <Card>
             <CardHeader>
-              <CardTitle>Form Pendaftaran Calon Anggota</CardTitle>
+              <CardTitle>Form Pendaftaran CUFO</CardTitle>
               <CardDescription>Lengkapi data diri Anda</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -482,7 +482,7 @@ const summary = useMemo(() => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard Calon Anggota</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard CUFO</h1>
             <p className="text-sm text-gray-500">Selamat datang, {myRegistrant?.fullName}</p>
           </div>
           <div className="flex gap-2">

@@ -184,7 +184,7 @@ export default function MentorDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Daftar Mentee</CardTitle>
-                <CardDescription>Calon anggota yang berada di bawah bimbingan Anda</CardDescription>
+                <CardDescription>CUFO yang berada di bawah bimbingan Anda</CardDescription>
               </CardHeader>
               <CardContent>
                 {mentees.length > 0 ? (

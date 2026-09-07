@@ -89,7 +89,7 @@ export default function Leaderboard() {
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Papan Peringkat</h1>
           <p className="text-gray-500 mt-2">
-            Top 5 Calon Anggota dengan Poin Tertinggi
+            Top 5 CUFO dengan Poin Tertinggi
           </p>
           <p className="text-xs text-gray-400 mt-1">
             Nama disamarkan untuk menjaga privasi. Ayo kumpulkan poin lebih banyak!

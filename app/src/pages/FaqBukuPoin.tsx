@@ -20,7 +20,7 @@ const sections = [
     icon: BookOpen,
     title: "1. Apa itu Buku Poin?",
     content:
-      "Sistem poin merupakan salah satu syarat utama bagi calon anggota untuk dapat lolos dan dilantik menjadi anggota resmi Unit Fotografi UGM. Saat ini, Buku Poin telah sepenuhnya beralih ke platform Website untuk mempermudah proses input, pemantauan progress, dan verifikasi kegiatan secara real-time.",
+      "Sistem poin merupakan salah satu syarat utama bagi Calon Anggota UFO (CUFO) untuk dapat lolos dan dilantik menjadi anggota resmi Unit Fotografi UGM. Saat ini, Buku Poin telah sepenuhnya beralih ke platform Website untuk mempermudah proses input, pemantauan progress, dan verifikasi kegiatan secara real-time.",
     highlight: false,
   },
   {
@@ -28,7 +28,7 @@ const sections = [
     icon: Target,
     title: "2. Berapa Minimal Target Poin?",
     content:
-      "Target minimal yang harus dikumpulkan oleh setiap calon anggota adalah 100 poin agar dapat dinyatakan memenuhi syarat kelulusan dan dilantik menjadi anggota resmi UFO UGM. Progress pencapaian ini dapat langsung dilihat pada bar indikator warna merah di dasbor akun Anda.",
+      "Target minimal yang harus dikumpulkan oleh setiap CUFO adalah 100 poin agar dapat dinyatakan memenuhi syarat kelulusan dan dilantik menjadi anggota resmi UFO UGM. Progress pencapaian ini dapat langsung dilihat pada bar indikator warna merah di dasbor akun Anda.",
     highlight: true,
   },
   {
@@ -129,7 +129,7 @@ export default function FaqBukuPoin() {
               FAQ Buku Poin Digital Unit Fotografi UGM (UFO UGM)
             </h2>
             <p className="text-red-100">
-              Panduan lengkap bagi calon anggota untuk memahami sistem poin, cara pengisian, dan proses verifikasi kegiatan.
+              Panduan lengkap bagi CUFO untuk memahami sistem poin, cara pengisian, dan proses verifikasi kegiatan.
             </p>
           </CardContent>
         </Card>

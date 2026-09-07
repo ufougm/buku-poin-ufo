@@ -62,9 +62,9 @@ export default function Hero() {
         {/* Stats */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
           {[
-            { label: "Anggota Aktif", value: "150+" },
+            { label: "CUFO XXXIV", value: "230+" },
             { label: "Kegiatan/Tahun", value: "50+" },
-            { label: "Tahun Berdiri", value: "30+" },
+            { label: "Tahun Berdiri", value: "35" },
             { label: "Prestasi", value: "100+" },
           ].map((stat) => (
             <div

@@ -418,8 +418,6 @@ export function determineRole(angkatan: number, divisi: string): LocalMember["ro
   return null;
 }
 
-console.log("Cek Data Mentah Member:", members[0]);
-
 export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & { nsa: string })[] {
   return members
     .filter((m) => m.role === "pemandu" || m.role === "psdm_pemandu")

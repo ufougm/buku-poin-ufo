@@ -86,8 +86,6 @@ export interface VerifiedMember {
   role: "pemandu" | "psdm";
 }
 
-console.log("Cek Data Mentah Member:", members[0]);
-
 // ─── Activity Types (Updated) ────────────────────────────────────
 export const ACTIVITY_TYPES = [
   { id: 1, name: "Diksar", category: "Diklat", points: 25, description: "Diklat dasar fotografi" },
@@ -419,6 +417,8 @@ export function determineRole(angkatan: number, divisi: string): LocalMember["ro
   if (angkatan === 33 && d !== "psdm") return "pemandu";
   return null;
 }
+
+console.log("Cek Data Mentah Member:", members[0]);
 
 export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & { nsa: string })[] {
   return members

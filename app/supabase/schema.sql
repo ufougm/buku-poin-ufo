@@ -97,32 +97,37 @@ CREATE TABLE IF NOT EXISTS activity_verifications (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed Activity Types (24 types)
+-- Seed Activity Types (29 types)
 INSERT INTO activity_types (number, name, points, requires_role) VALUES
-(1, 'Diksar', 25, 'no'),
-(2, 'Pameris Pameran Dikjut', 20, 'no'),
-(3, 'Panitia Pameran Dikjut', 20, 'yes'),
-(4, 'Piket Sekre Akbar', 10, 'no'),
-(5, 'Diklat Wajib & Umum', 10, 'no'),
-(6, 'Ketua Kelas Pameran Pra Pelantikan', 5, 'yes'),
-(7, 'Event Hunting', 10, 'no'),
-(8, 'Piket Sekre', 10, 'no'),
-(9, 'Ikut Presentasi Karya Pameris (Pra-pel)', 3, 'no'),
-(10, 'Menjadi Divisi DDD di kepanitiaan', 5, 'yes'),
-(11, 'Memenangkan Lomba Fotografi/Videografi', 10, 'no'),
-(12, 'Mengikuti Lomba Fotografi/Videografi', 2, 'no'),
-(13, 'Submit Karya untuk pameran', 3, 'no'),
-(14, 'Membantu dokumentasi UKM / komunitas di UGM', 3, 'no'),
-(15, 'Berpartisipasi Dalam Kegiatan HUT UFO', 2, 'no'),
-(16, 'Kurasi Pameran', 3, 'no'),
-(17, 'Hunting individu', 2, 'no'),
-(18, 'Hunting bareng UFO/CUFO (min. 3 orang)', 5, 'no'),
-(19, 'Main ke Sekre UFO (min. 2 jam)', 2, 'no'),
-(20, 'Mengikuti Workshop/Seminar Fotografi/Videografi (selain UFO)', 5, 'no'),
-(21, 'Mengunjungi Pameran', 2, 'no'),
-(22, 'Mengunjungi Pameran bersama UFO/CUFO', 5, 'no'),
-(23, 'Mengikuti One Week Challenge (poin dihitung perhari)', 1, 'no'),
-(24, 'Kegiatan lain Sesuai Kebijakan/Persetujuan Ketua UFO (tentative)', 0, 'no');
+(1, 'Diksar', 15, 'no'),
+(2, 'Pameris UTOPIA', 15, 'no'),
+(3, 'Pameris Pameran Prapel', 10, 'no'),
+(4, 'Panitia Pameran Prapel', 10, 'yes'),
+(5, 'Memenangkan Lomba Fotografi/Videografi diluar UGM (S&K Berlaku)', 8, 'no'),
+(6, 'Diklat Wajib & Umum', 8, 'no'),
+(7, 'Event Hunting UFO', 8, 'no'),
+(8, 'Kunjungan Pameran UTOPIA', 8, 'no'),
+(9, 'Berpartisipasi Dalam Kegiatan HUT UFO', 5, 'no'),
+(10, 'Hunting Bareng Ufo/Cufo Diluar Event Hunting (Min. 3 Orang)', 5, 'no'),
+(11, 'Ketua Kelas Pameran Pra Pelantikan', 5, 'yes'),
+(12, 'Mengunjungi Pameran bersama UFO/ CUFO', 5, 'no'),
+(13, 'Memenangkan Lomba Fotografi/Videografi di UGM', 5, 'no'),
+(14, 'Piket Sekre Akbar', 5, 'no'),
+(15, 'Piket Sekre', 5, 'no'),
+(16, 'Submit Penugasan Diklat', 5, 'no'),
+(17, 'UFOlunteer', 5, 'no'),
+(18, 'Ikut Presentasi Karya Pameris (Pra-pel)', 3, 'no'),
+(19, 'Menjadi Divisi DDD di kepanitiaan', 3, 'yes'),
+(20, 'Mengikuti Workshop/Seminar Fotografi/Videografi (selain UFO)', 3, 'no'),
+(21, 'Hunting Individu', 2, 'no'),
+(22, 'Kurasi Pameran', 2, 'no'),
+(23, 'Mengikuti Lomba Fotografi/Videografi', 2, 'no'),
+(24, 'Membantu Dokumentasi UKM / Komunitas di UGM', 2, 'no'),
+(25, 'First Gathering CUFO', 1, 'no'),
+(26, 'Main ke Sekre UFO (min. 2 jam)', 1, 'no'),
+(27, 'Mengunjungi Pameran Mandiri', 1, 'no'),
+(28, 'Mengikuti One Week Challenge (poin dihitung perhari)', 1, 'no'),
+(29, 'Kegiatan lain Sesuai Kebijakan/Persetujuan Ketua UFO', 0, 'no');
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;

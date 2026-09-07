@@ -75,6 +75,7 @@ export interface LocalMember {
   role: "psdm" | "pemandu" | "psdm_pemandu" | "user";
   password: string;
   email?: string;
+  phone?: string;
   isPreRegistered: boolean;
 }
 

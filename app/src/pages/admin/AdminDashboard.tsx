@@ -848,7 +848,7 @@ export default function AdminDashboard() {
                   className="space-y-4"
                 >
                   <div><Label>Nama Lengkap *</Label><Input value={pemanduForm.fullName} onChange={(e) => setPemanduForm({ ...pemanduForm, fullName: e.target.value })} placeholder="Nama pemandu" required /></div>
-                  <div><Label>Email *</Label><Input type="email" value={pemanduForm.email} onChange={(e) => setPemanduForm({ ...pemanduForm, email: e.target.value })} placeholder="email@ugm.ac.id" required /></div>
+                  <div><Label>Email *</Label><Input type="text" value={pemanduForm.email} onChange={(e) => setPemanduForm({ ...pemanduForm, email: e.target.value })} placeholder="email@ugm.ac.id" required /></div>
                   <div><Label>Keahlian</Label><Input value={pemanduForm.expertise} onChange={(e) => setPemanduForm({ ...pemanduForm, expertise: e.target.value })} placeholder="Contoh: Fotografi Jurnalistik" /></div>
                   <div><Label>Kapasitas CUFO</Label><Input type="number" value={pemanduForm.maxMentees} onChange={(e) => setPemanduForm({ ...pemanduForm, maxMentees: Number(e.target.value) })} /></div>
                   <div className="flex gap-2 pt-2">
@@ -871,7 +871,7 @@ export default function AdminDashboard() {
                 >
                   <div><Label>Nomor Seri Anggota *</Label><Input value={verifiedForm.serialNumber} onChange={(e) => setVerifiedForm({ ...verifiedForm, serialNumber: e.target.value })} placeholder="Contoh: UFO-2024-003" disabled={!!editingVerified} required /></div>
                   <div><Label>Nama Lengkap *</Label><Input value={verifiedForm.fullName} onChange={(e) => setVerifiedForm({ ...verifiedForm, fullName: e.target.value })} placeholder="Nama lengkap" required /></div>
-                  <div><Label>Email</Label><Input type="email" value={verifiedForm.email} onChange={(e) => setVerifiedForm({ ...verifiedForm, email: e.target.value })} placeholder="email@ugm.ac.id" /></div>
+                  <div><Label>Email</Label><Input type="text" value={verifiedForm.email} onChange={(e) => setVerifiedForm({ ...verifiedForm, email: e.target.value })} placeholder="email@ugm.ac.id" /></div>
                   <div><Label>Role</Label>
                     <select
                       value={verifiedForm.role}

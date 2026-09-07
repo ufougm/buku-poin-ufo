@@ -309,7 +309,7 @@ export async function updatePemandu(id: number, updates: Partial<StandalonePeman
   if (updates.email !== undefined) payload.email = updates.email;
   if (updates.expertise !== undefined) payload.expertise = updates.expertise;
   if (updates.maxMentees !== undefined) payload.max_mentees = updates.maxMentees;
-  if (updates.phone !== undefined) payload.max_mentees = updates.phone;
+  if (updates.phone !== undefined) payload.phone = updates.phone;
   const { error } = await supabase.from("standalone_pemandus").update(payload).eq("id", id);
   if (error) throw error;
 }
@@ -428,7 +428,7 @@ export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & 
       email: m.email || m.nsa,
       nsa: m.nsa,
       expertise: `${m.divisi} (Angkatan ${m.angkatan})`,
-      maxMentees: 10,
+      maxMentees: m.max_mentees || 10,
       phone: m.phone,
       status: "active" as const,
     }));

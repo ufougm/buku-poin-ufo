@@ -385,7 +385,7 @@ export const PRE_REGISTERED_MEMBERS: Omit<LocalMember, "isPreRegistered">[] = [
   { nsa: "NSA.3325.025.1134", name: "REFANIA AZHARI SIREGAR", angkatan: 33, divisi: "Pameran", role: "pemandu", password: "1134", phone: "089518530464" },
   { nsa: "NSA.3325.027.1136", name: "SANDY DIYO ANGGARA", angkatan: 33, divisi: "Sekretaris", role: "pemandu", password: "1136", phone: "082281469078" },
   { nsa: "NSA.3325.028.1137", name: "SHAUMI NOORRAMADHANI", angkatan: 33, divisi: "Medinfo", role: "pemandu", password: "1137", phone: "085180917752" },
-  { nsa: "NSA.3325.029.1138", name: "SITI YASMIN FAJRI RAMADHANI", angkatan: 33, divisi: "Humas", role: "pemandu", password: "1138", phone: "088210376152" },
+  { nsa: "NSA.3325.029.1138", name: "SITI YASMIN FAJRI RAMADHANI", angkatan: 33, divisi: "Humas", role: "pemandu", password: "1138", phone: "082210376152" },
   { nsa: "NSA.3325.030.1139", name: "SYAKIRA NAILA JAGADDHITA", angkatan: 33, divisi: "Humas", role: "pemandu", password: "1139", phone: "087718884788" },
   { nsa: "NSA.3325.032.1141", name: "YUSUF KURNIAWAN", angkatan: 33, divisi: "Bendahara", role: "pemandu", password: "1141", phone: "08883912392" },
 ];

@@ -86,6 +86,8 @@ export interface VerifiedMember {
   role: "pemandu" | "psdm";
 }
 
+console.log("Cek Data Mentah Member:", members[0]);
+
 // ─── Activity Types (Updated) ────────────────────────────────────
 export const ACTIVITY_TYPES = [
   { id: 1, name: "Diksar", category: "Diklat", points: 25, description: "Diklat dasar fotografi" },

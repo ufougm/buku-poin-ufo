@@ -87,6 +87,7 @@ export default function MemberDashboard() {
 
 console.log("BONGKAR DATA:", JSON.stringify(pemandus, null, 2));
 console.log("Cek HP Pemandu 1:", pemandu1?.phone);
+console.log("Cek Data Mentah Member:", members[0]);
 
   // Image compression utility
   const compressImage = (file: File, maxWidth = 800, quality = 0.6): Promise<string> => {

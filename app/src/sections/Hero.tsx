@@ -44,7 +44,7 @@ export default function Hero() {
               className="bg-red-600 hover:bg-red-700 text-white px-8 py-6 text-base font-semibold rounded-xl shadow-lg shadow-red-600/25 transition-all hover:shadow-xl hover:shadow-red-600/30"
             >
               <BookOpen className="h-5 w-5 mr-2" />
-              Masuk ke Sistem
+              Masuk
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </Link>
@@ -62,7 +62,7 @@ export default function Hero() {
         {/* Stats */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
           {[
-            { label: "CUFO XXXIV", value: "230+" },
+            { label: "CUFO XXXIV", value: "250+" },
             { label: "Kegiatan/Tahun", value: "50+" },
             { label: "Tahun Berdiri", value: "35" },
             { label: "Prestasi", value: "100+" },

@@ -76,6 +76,7 @@ export default function MemberDashboard() {
     : [];
   const pemandu1 = pemandus ? pemandus[0] : null;
   const pemandu2 = pemandus ? pemandus[1] : null;
+  const pemandu3 = pemandus ? pemandus[2] : null;
   const [customPoints, setCustomPoints] = useState<number | "">("");
   const [activityDate, setActivityDate] = useState("");
   const [activityDateEnd, setActivityDateEnd] = useState("");
@@ -683,10 +684,12 @@ const summary = useMemo(() => {
           </CardContent>
         </Card>
 
-{(pemandu1 || pemandu2) && (
+{(pemandu1 || pemandu2 || pemandu3) && (
   <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm mt-6 mb-8">
     <h3 className="text-lg font-bold text-gray-800 mb-4">Pemandu Kelompok Anda</h3>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    
+    {/* Ubah grid md:grid-cols-2 menjadi md:grid-cols-3 agar muat 3 orang */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
       {/* Kartu Pemandu 1 */}
       {pemandu1 && (
@@ -715,6 +718,24 @@ const summary = useMemo(() => {
           </div>
           <a 
             href={formatWaLink(pemandu2.phone)} 
+            target="_blank" 
+            rel="noreferrer"
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            Chat WA
+          </a>
+        </div>
+      )}
+
+      {/* Kartu Pemandu 3 */}
+      {pemandu3 && (
+        <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50/50 hover:shadow-md transition-shadow">
+          <div>
+            <p className="font-semibold text-gray-800">{pemandu3.fullName}</p>
+            <p className="text-xs text-gray-500">Pemandu 3</p>
+          </div>
+          <a 
+            href={formatWaLink(pemandu3.phone)} 
             target="_blank" 
             rel="noreferrer"
             className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"

@@ -115,11 +115,20 @@ function safeCompute(local: any) {
     });
 
     const kelompokData = kelompoks.map((k: any) => {
-      const p1 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[0]);
-      const p2 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[1]);
-      const cufoCount = kelompokAssignments.filter((ka: any) => ka.kelompokId === k.id).length;
-      return { ...k, pemandu1Name: p1?.fullName || "-", pemandu2Name: p2?.fullName || "-", cufoCount };
-    });
+  const p1 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[0]);
+  const p2 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[1]);
+  const p3 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[2]); // <-- Tambahkan baris ini
+  
+  const cufoCount = kelompokAssignments.filter((ka: any) => ka.kelompokId === k.id).length;
+  
+  return { 
+    ...k, 
+    pemandu1Name: p1?.fullName || "-", 
+    pemandu2Name: p2?.fullName || "-", 
+    pemandu3Name: p3?.fullName || "-",
+    cufoCount 
+  };
+});
 
     return { stats, recentActivities, topRegistrants, activityDistribution, pemanduStats, allAssignments, unassigned, registrants, pemandus, kelompokData, kelompoks, error: null };
   } catch (e: any) {
@@ -145,7 +154,7 @@ export default function AdminDashboard() {
   const [editingKelompok, setEditingKelompok] = useState<any>(null);
   const [pemanduForm, setPemanduForm] = useState({ fullName: "", email: "", expertise: "", maxMentees: 10 });
   const [verifiedForm, setVerifiedForm] = useState({ serialNumber: "", fullName: "", email: "", role: "pemandu" as "pemandu" | "psdm" });
-  const [kelompokForm, setKelompokForm] = useState({ name: "", pemanduId1: "", pemanduId2: "" });
+  const [kelompokForm, setKelompokForm] = useState({ name: "", pemanduId1: "", pemanduId2: "", pemanduId3: "" });
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: any } | null>(null);
 
   // Google Sheets sync state
@@ -267,7 +276,7 @@ export default function AdminDashboard() {
 
     setKelompokSaving(true);
     try {
-      const pemanduIds = [Number(kelompokForm.pemanduId1), Number(kelompokForm.pemanduId2)];
+      const pemanduIds = [Number(kelompokForm.pemanduId1), Number(kelompokForm.pemanduId2), Number(kelompokForm.pemanduId3)].filter(id => !isNaN(id) && id > 0);
       if (editingKelompok) {
         await local.updateKelompok(editingKelompok.id, { name: kelompokForm.name.trim(), pemanduIds });
       } else {
@@ -536,10 +545,16 @@ export default function AdminDashboard() {
                       className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
                     >
                       <option value="">Pilih kelompok</option>
-                      {data.kelompokData.map((k: any) => (
-                        <option key={k.id} value={k.id.toString()}>
-                          {k.name} ({k.pemandu1Name} & {k.pemandu2Name})
-                        </option>
+{data.kelompokData.map((k: any) => {
+  // Menggabungkan nama pemandu, membuang yang kosong atau bernilai "-"
+  const pemanduList = [k.pemandu1Name, k.pemandu2Name, k.pemandu3Name]
+    .filter(name => name && name !== "-")
+    .join(" & ");
+
+  return (
+    <option key={k.id} value={k.id.toString()}>
+      {k.name} ({pemanduList})
+    </option>
                       ))}
                     </select>
                   </div>
@@ -673,18 +688,19 @@ export default function AdminDashboard() {
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow><TableHead>Nama Kelompok</TableHead><TableHead>Pemandu 1</TableHead><TableHead>Pemandu 2</TableHead><TableHead>Jumlah CUFO</TableHead><TableHead>Aksi</TableHead></TableRow>
+                        <TableRow><TableHead>Nama Kelompok</TableHead><TableHead>Pemandu 1</TableHead><TableHead>Pemandu 2</TableHead><TableHead>Pemandu 3</TableHead><TableHead>Jumlah CUFO</TableHead><TableHead>Aksi</TableHead></TableRow>
                       </TableHeader>
                       <TableBody>
                         {data.kelompokData.map((k: any) => (
-                          <TableRow key={k.id}>
-                            <TableCell className="font-medium">{k.name}</TableCell>
-                            <TableCell>{k.pemandu1Name}</TableCell>
-                            <TableCell>{k.pemandu2Name}</TableCell>
-                            <TableCell>{k.cufoCount} CUFO</TableCell>
-                            <TableCell>
+  <TableRow key={k.id}>
+    <TableCell className="font-medium">{k.name}</TableCell>
+    <TableCell>{k.pemandu1Name}</TableCell>
+    <TableCell>{k.pemandu2Name}</TableCell>
+    <TableCell>{k.pemandu3Name}</TableCell>
+    <TableCell>{k.cufoCount} CUFO</TableCell>
+    <TableCell>
                               <div className="flex gap-1">
-                                <Button size="sm" variant="ghost" onClick={() => { setEditingKelompok(k); setKelompokForm({ name: k.name, pemanduId1: k.pemanduIds[0]?.toString() || "", pemanduId2: k.pemanduIds[1]?.toString() || "" }); setShowKelompokForm(true); }}>
+                                <Button size="sm" variant="ghost" onClick={() => { setEditingKelompok(k); setKelompokForm({ name: k.name, pemanduId1: k.pemanduIds[0]?.toString() || "", pemanduId2: k.pemanduIds[1]?.toString() || "", pemanduId3: k.pemanduIds[2]?.toString() || "" }); setShowKelompokForm(true); }}>
                                   <Edit3 className="h-3.5 w-3.5 text-blue-500" />
                                 </Button>
                                 <Button size="sm" variant="ghost" onClick={() => setDeleteConfirm({ type: "kelompok", id: k.id })}>
@@ -938,6 +954,19 @@ export default function AdminDashboard() {
                       required
                     >
                       <option value="">Pilih pemandu</option>
+                      {data.pemandus.map((p) => (
+                        <option key={p.id} value={p.id.toString()}>{p.fullName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label>Pemandu 3 (Opsional)</Label>
+                    <select
+                      value={kelompokForm.pemanduId3}
+                      onChange={(e) => { setKelompokError(""); setKelompokForm({ ...kelompokForm, pemanduId3: e.target.value }); }}
+                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white"
+                    >
+                      <option value="">-- Tidak Ada --</option>
                       {data.pemandus.map((p) => (
                         <option key={p.id} value={p.id.toString()}>{p.fullName}</option>
                       ))}

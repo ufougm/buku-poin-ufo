@@ -540,23 +540,24 @@ export default function AdminDashboard() {
                   <div>
                     <label className="text-sm font-medium mb-2 block">Kelompok</label>
                     <select
-                      value={selectedKelompok}
-                      onChange={(e) => setSelectedKelompok(e.target.value)}
-                      className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
-                    >
-                      <option value="">Pilih kelompok</option>
-{data.kelompokData.map((k: any) => {
-  // Menggabungkan nama pemandu, membuang yang kosong atau bernilai "-"
-  const pemanduList = [k.pemandu1Name, k.pemandu2Name, k.pemandu3Name]
-    .filter(name => name && name !== "-")
-    .join(" & ");
+  value={selectedKelompok}
+  onChange={(e) => setSelectedKelompok(e.target.value)}
+  className="w-full h-11 px-3 border border-gray-300 rounded-lg text-sm bg-white appearance-none"
+>
+  <option value="">Pilih kelompok</option>
+  {data.kelompokData.map((k: any) => {
+    // Menggabungkan nama pemandu, membuang yang kosong atau bernilai "-"
+    const pemanduList = [k.pemandu1Name, k.pemandu2Name, k.pemandu3Name]
+      .filter(name => name && name !== "-")
+      .join(" & ");
 
-  return (
-    <option key={k.id} value={k.id.toString()}>
-      {k.name} ({pemanduList})
-    </option>
-                      ))}
-                    </select>
+    return (
+      <option key={k.id} value={k.id.toString()}>
+        {k.name} ({pemanduList})
+      </option>
+    ); 
+  })}  
+</select>
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">CUFO (Belum Ditugaskan)</label>

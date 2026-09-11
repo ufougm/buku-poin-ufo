@@ -85,6 +85,19 @@ export default function MemberDashboard() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadError, setUploadError] = useState("");
 
+  // Penentuan batas poin berdasarkan ID Kegiatan
+  const isCustomPoint = ['4', '14', '30'].includes(activityTypeId);
+  let minPts = 1;
+  let maxPts = 100; // Batas atas default untuk Kegiatan Lain
+  
+  if (activityTypeId === '4') {
+    minPts = 8;
+    maxPts = 10;
+  } else if (activityTypeId === '14') {
+    minPts = 5;
+    maxPts = 10;
+  }
+
 console.log("BONGKAR DATA:", JSON.stringify(pemandus, null, 2));
 console.log("Cek HP Pemandu 1:", pemandu1?.phone);
 
@@ -234,6 +247,15 @@ const summary = useMemo(() => {
     setUploadError("");
 
     try {
+      // Validasi tambahan agar user tidak bisa mengakali batas input di browser
+      if (isCustomPoint) {
+        const numPts = Number(customPoints);
+        if (numPts < minPts || numPts > maxPts) {
+          setUploadError(`Jumlah poin ditolak. Poin untuk kegiatan ini harus antara ${minPts} - ${maxPts}.`);
+          return;
+        }
+      }
+
       await local.addActivity({
         registrantId: myRegistrant.id,
         activityTypeId: Number(activityTypeId),
@@ -243,7 +265,8 @@ const summary = useMemo(() => {
         role: requiresRole ? role : undefined,
         location,
         documentationImages: uploadedImages.length > 0 ? uploadedImages : undefined,
-        points: activityTypeId === '24' ? Number(customPoints) : (selectedType?.points || 0),
+        // 👇 Ubah baris penentuan points menjadi ini:
+        points: isCustomPoint ? Number(customPoints) : (selectedType?.points || 0),
         status: "pending",
       });
       setFormOpen(false);
@@ -513,23 +536,24 @@ const summary = useMemo(() => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {activityTypeId === '24' && (
-  <div className="mt-3 p-3 border border-red-200 bg-red-50/50 rounded-md space-y-2">
-    <Label className="text-red-700 font-semibold">Jumlah Poin Ajuan Mandiri</Label>
-    <Input
-      type="number"
-      min="1"
-      placeholder="Masukkan jumlah poin (contoh: 10)"
-      value={customPoints}
-      onChange={(e) => setCustomPoints(e.target.value)}
-      className="bg-white border-red-200 focus:ring-red-500"
-      required
-    />
-    <p className="text-xs text-red-600 italic">
-      *Silakan isi poin yang wajar. Admin akan mengevaluasi ajuan ini.
-    </p>
-  </div>
-)}
+                    {isCustomPoint && (
+                      <div className="mt-3 p-3 border border-red-200 bg-red-50/50 rounded-md space-y-2">
+                        <Label className="text-red-700 font-semibold">Jumlah Poin Ajuan Mandiri</Label>
+                        <Input
+                          type="number"
+                          min={minPts}
+                          max={maxPts}
+                          placeholder={`Masukkan poin (${minPts} - ${maxPts})`}
+                          value={customPoints}
+                          onChange={(e) => setCustomPoints(e.target.value)}
+                          className="bg-white border-red-200 focus:ring-red-500"
+                          required
+                        />
+                        <p className="text-xs text-red-600 italic">
+                          *Rentang poin valid: {minPts} hingga {maxPts} poin. Admin akan mengevaluasi ajuan ini.
+                        </p>
+                      </div>
+                    )}
                   </div>
                   {requiresRole && (
                     <div>

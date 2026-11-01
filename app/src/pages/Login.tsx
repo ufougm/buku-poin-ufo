@@ -83,8 +83,11 @@ const handleAnggotaLogin = async (e: React.FormEvent) => {
       // 4. GAGAL LOGIN
       setError("Password salah atau NSA tidak ditemukan.");
     }
-
-    finally { setLoading(false);
+} catch (err) {
+      setError("Terjadi kesalahan pada sistem.");
+    } finally {
+      setLoading(false); // <--- Pastikan blok finally ditutup dengan benar di sini
+    }
   };
 
   // ─── Login: Calon Anggota (Email + NIM) ─────────────────────────

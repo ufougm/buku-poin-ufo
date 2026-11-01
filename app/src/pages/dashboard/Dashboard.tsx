@@ -51,6 +51,23 @@ import { id } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import MotivationalToast from "@/components/MotivationalToast";
+import { compressImage } from "@/lib/utils"; // Import fungsinya
+
+// Di dalam fungsi penanganan input file (onChange)
+const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const files = e.target.files;
+  if (!files || files.length === 0) return;
+
+  const compressedImages: string[] = [];
+  for (let i = 0; i < files.length; i++) {
+    // Kompresi setiap file foto
+    const compressed = await compressImage(files[i]);
+    compressedImages.push(compressed);
+  }
+
+  // Simpan hasil gambar yang sudah kecil (di bawah 100 KB) ke state form Anda
+  setDocumentationImages(compressedImages);
+};
 
 const formatWaLink = (phone: string | undefined) => {
   if (!phone) return "#";

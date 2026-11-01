@@ -402,7 +402,7 @@ const PSDM_PIN = "UFOADMIN2024";
 // ─── Exported Functions ───────────────────────────────────────────
 export function verifyMember(serialNumber: string, role: "pemandu" | "psdm", pin?: string): VerifiedMember | null {
   const members = PRE_REGISTERED_MEMBERS.filter((m) => m.role === role || (role === "psdm" && m.role === "psdm_pemandu"));
-  const member = members.find((m) => m.nsa === serialNumber);
+  const member = (members || [] ).find((m) => m.nsa === serialNumber);
   if (!member) return null;
   if (role === "psdm" && pin !== PSDM_PIN) return null;
   return { serialNumber: member.nsa, fullName: member.name, email: member.email || "", role };
@@ -444,7 +444,7 @@ export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
   }
 
   if (!data || data.length === 0) {
-    const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa === nsa);
+    const localMember = (PRE_REGISTERED_MEMBERS || [] ).find(m => m.nsa === nsa);
     if (localMember) {
       await supabase.from("members").insert([{
         nsa: localMember.nsa,
@@ -476,7 +476,7 @@ export async function getMembers(): Promise<LocalMember[]> {
 }
 
 export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefined> {
-  const preReg = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
+  const preReg = (PRE_REGISTERED_MEMBERS || [] ).find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
   if (preReg) return { ...preReg, isPreRegistered: true };
 
   try {
@@ -489,7 +489,7 @@ export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefin
 
 export async function verifyMemberLogin(nsa: string, pass: string): Promise<LocalMember | null> {
   const nsaClean = nsa.trim().toLowerCase();
-  const local = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsaClean);
+  const local = (PRE_REGISTERED_MEMBERS || [] ).find((m) => m.nsa.toLowerCase() === nsaClean);
   if (local) {
     if (local.password === pass) {
       return { ...local, isPreRegistered: true };

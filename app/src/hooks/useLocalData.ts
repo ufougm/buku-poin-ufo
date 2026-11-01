@@ -515,6 +515,31 @@ export function getPsdmMembers(members: LocalMember[]): LocalPemandu[] {
     }));
 }
 
+export async function verifyMemberLogin(nsa: string, pass: string): Promise<LocalMember | null> {
+  const nsaClean = nsa.trim().toLowerCase();
+
+  // 1. Cek dari daftar pre-registered
+  const local = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsaClean);
+  if (local) {
+    if (local.password === pass) {
+      return { ...local, isPreRegistered: true };
+    }
+    return null;
+  }
+
+  // 2. Cek ke Supabase untuk anggota dinamis
+  try {
+    const { data } = await supabase.from("members").select("*").eq("nsa", nsa.trim()).single();
+    if (data && data.password === pass) {
+      return { ...toCamel(data), isPreRegistered: true };
+    }
+  } catch {
+    /* ignore error */
+  }
+
+  return null;
+}
+
 // ─── Main React Hook ──────────────────────────────────────────────
 export function useLocalData() {
   const [version, setVersion] = useState(0);

@@ -52,19 +52,23 @@ export default function Login() {
 // ─── Login: Anggota (NSA-based) ─────────────────────────────────
   const handleAnggotaLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
+    // 1. Validasi agar input tidak kosong
     if (!nsaUsername.trim() || !nsaPassword.trim()) {
       setError("Username dan password wajib diisi");
       return;
     }
 
+    // Aktifkan loading SEBELUM melakukan verifikasi asinkron
     setLoading(true);
-    setError("");
 
     try {
+      // 2. AMBIL DATA DARI SUPABASE
       const member = await verifyMemberLogin(nsaUsername.trim(), nsaPassword);
 
       if (member) {
+        // 3. BERHASIL LOGIN: Cukup gunakan setSession (seperti Calon Anggota)
         setSession({
           id: member.nsa,
           name: member.name,
@@ -74,11 +78,12 @@ export default function Login() {
           isPreRegistered: true,
         });
       } else {
+        // 4. GAGAL LOGIN
         setError("Password salah atau NSA tidak ditemukan.");
       }
     } catch (err) {
       setError("Terjadi kesalahan pada sistem.");
-    } finally {
+    } finally { 
       setLoading(false);
     }
   };

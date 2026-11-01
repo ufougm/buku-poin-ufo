@@ -417,7 +417,7 @@ export function determineRole(angkatan: number, divisi: string): LocalMember["ro
 }
 
 export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & { nsa: string })[] {
-  return members
+  return (members || [])
     .filter((m) => m.role === "pemandu" || m.role === "psdm_pemandu")
     .map((m) => ({
       id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || 0,
@@ -446,7 +446,7 @@ export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
   if (!data || data.length === 0) {
     const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa === nsa);
     if (localMember) {
-      const { error: insertError } = await supabase.from("members").insert([{
+      await supabase.from("members").insert([{
         nsa: localMember.nsa,
         name: localMember.name,
         role: localMember.role,
@@ -454,7 +454,6 @@ export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
         divisi: localMember.divisi,
         password: updates.password || localMember.password,
       }]);
-      if (insertError) console.error("ERROR SUPABASE (INSERT):", insertError);
     }
   }
 }
@@ -488,6 +487,28 @@ export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefin
   return undefined;
 }
 
+export async function verifyMemberLogin(nsa: string, pass: string): Promise<LocalMember | null> {
+  const nsaClean = nsa.trim().toLowerCase();
+  const local = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsaClean);
+  if (local) {
+    if (local.password === pass) {
+      return { ...local, isPreRegistered: true };
+    }
+    return null;
+  }
+
+  try {
+    const { data } = await supabase.from("members").select("*").eq("nsa", nsa.trim()).single();
+    if (data && data.password === pass) {
+      return { ...toCamel(data), isPreRegistered: true };
+    }
+  } catch {
+    /* ignore error */
+  }
+
+  return null;
+}
+
 export async function seedMembers() {
   try {
     const { count } = await supabase.from("members").select("*", { count: "exact", head: true });
@@ -501,7 +522,7 @@ export async function seedMembers() {
 }
 
 export function getPsdmMembers(members: LocalMember[]): LocalPemandu[] {
-  return members
+  return (members || [])
     .filter((m) => m.role === "psdm" || m.role === "psdm_pemandu")
     .map((m) => ({
       id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || 0,
@@ -513,31 +534,6 @@ export function getPsdmMembers(members: LocalMember[]): LocalPemandu[] {
       phone: m.phone,
       status: "active" as const,
     }));
-}
-
-export async function verifyMemberLogin(nsa: string, pass: string): Promise<LocalMember | null> {
-  const nsaClean = nsa.trim().toLowerCase();
-
-  // 1. Cek dari daftar pre-registered
-  const local = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsaClean);
-  if (local) {
-    if (local.password === pass) {
-      return { ...local, isPreRegistered: true };
-    }
-    return null;
-  }
-
-  // 2. Cek ke Supabase untuk anggota dinamis
-  try {
-    const { data } = await supabase.from("members").select("*").eq("nsa", nsa.trim()).single();
-    if (data && data.password === pass) {
-      return { ...toCamel(data), isPreRegistered: true };
-    }
-  } catch {
-    /* ignore error */
-  }
-
-  return null;
 }
 
 // ─── Main React Hook ──────────────────────────────────────────────
@@ -556,7 +552,7 @@ export function useLocalData() {
   const [standalonePemandus, setStandalonePemandus] = useState<StandalonePemandu[]>([]);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // Load all data from Supabase (Aman & Bebas Looping)
+  // Load all data from Supabase
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -639,32 +635,38 @@ export function useLocalData() {
     refresh();
   };
 
-  // ─── Queries ────────────────────────────────────────────────────
+  // ─── Queries (Dilindungi dengan Fallback Array Kosong || []) ───────
   const memberPemandus = getPemandusFromMembers(members);
-  const allPemandus = [...memberPemandus, ...standalonePemandus.map((p) => ({ ...p, status: "active" as const, userId: 0 }))];
+  const allPemandus = [...memberPemandus, ...(standalonePemandus || []).map((p) => ({ ...p, status: "active" as const, userId: 0 }))];
 
-  const getRegistrantByEmail = (email: string) => registrants.find((r) => r.email.toLowerCase() === email.toLowerCase());
-  const getRegistrantById = (id: number) => registrants.find((r) => r.id === id);
-  const getPemanduById = (id: number) => allPemandus.find((p) => p.id === id);
-  const getKelompokForRegistrant = (registrantId: number) => kelompoks.find((k) => kelompokAssignments.some((ka) => ka.registrantId === registrantId && ka.kelompokId === k.id));
+  const getRegistrantByEmail = (email: string) => (registrants || []).find((r) => r.email && r.email.toLowerCase() === email.toLowerCase());
+  const getRegistrantById = (id: number) => (registrants || []).find((r) => r.id === id);
+  const getPemanduById = (id: number) => (allPemandus || []).find((p) => p.id === id);
+  
+  const getKelompokForRegistrant = (registrantId: number) => 
+    (kelompoks || []).find((k) => (kelompokAssignments || []).some((ka) => ka.registrantId === registrantId && ka.kelompokId === k.id));
+  
   const getPemandusForRegistrant = (registrantId: number) => {
     const k = getKelompokForRegistrant(registrantId);
     if (!k) return [];
-    return allPemandus.filter((p) => k.pemanduIds.includes(p.id));
+    return (allPemandus || []).filter((p) => (k.pemanduIds || []).includes(p.id));
   };
+
   const getKelompokNameForRegistrant = (registrantId: number) => getKelompokForRegistrant(registrantId)?.name || "Belum ditugaskan";
-  const getActivitiesByRegistrant = (registrantId: number) => activities.filter((a) => a.registrantId === registrantId);
+  const getActivitiesByRegistrant = (registrantId: number) => (activities || []).filter((a) => a.registrantId === registrantId);
+  
   const getCUFOByPemandu = (pemanduId: number) => {
-    const pemanduKelompoks = kelompoks.filter((k) => k.pemanduIds.includes(pemanduId));
+    const pemanduKelompoks = (kelompoks || []).filter((k) => (k.pemanduIds || []).includes(pemanduId));
     const kelompokIds = pemanduKelompoks.map((k) => k.id);
-    return kelompokAssignments
+    return (kelompokAssignments || [])
       .filter((ka) => kelompokIds.includes(ka.kelompokId))
       .map((ka) => {
-        const reg = registrants.find((r) => r.id === ka.registrantId);
+        const reg = (registrants || []).find((r) => r.id === ka.registrantId);
         return reg ? { registrantId: reg.id, registrantName: reg.fullName, registrantEmail: reg.email, registrantYear: reg.year, registrantMajor: reg.major } : null;
       })
       .filter(Boolean);
   };
+
   const getPointSummary = (registrantId: number) => {
     const acts = getActivitiesByRegistrant(registrantId);
     return {
@@ -707,5 +709,6 @@ export function useLocalData() {
     getActivitiesByRegistrant,
     getCUFOByPemandu,
     getPointSummary,
+    verifyMemberLogin,
   };
 }

@@ -55,6 +55,7 @@ export default function Login() {
 
 const handleAnggotaLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
     // 1. Validasi agar input tidak kosong
     if (!nsaUsername.trim() || !nsaPassword.trim()) {
@@ -62,8 +63,8 @@ const handleAnggotaLogin = async (e: React.FormEvent) => {
       return;
     }
 
+// Aktifkan loading SEBELUM melakukan verifikasi asinkron
     setLoading(true);
-    setError("");
 
     // 2. AMBIL DATA DARI SUPABASE (Baris ini yang terlewat di kode Anda)
     const member = await verifyMemberLogin(nsaUsername.trim(), nsaPassword);
@@ -83,7 +84,7 @@ const handleAnggotaLogin = async (e: React.FormEvent) => {
       setError("Password salah atau NSA tidak ditemukan.");
     }
 
-    setLoading(false);
+    finally { setLoading(false);
   };
 
   // ─── Login: Calon Anggota (Email + NIM) ─────────────────────────
@@ -131,9 +132,9 @@ const handleAnggotaLogin = async (e: React.FormEvent) => {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {error && (
-              <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">{error}</div>
-            )}
+            {!loading && error && (
+  <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">{error}</div>
+)}
 
             <Tabs defaultValue="anggota" onValueChange={() => setError("")}>
               <TabsList className="grid w-full grid-cols-2">

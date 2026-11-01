@@ -86,7 +86,7 @@ export interface VerifiedMember {
   role: "pemandu" | "psdm";
 }
 
-// ─── Activity Types (Updated) ────────────────────────────────────
+// ─── Activity Types ────────────────────────────────────────────
 export const ACTIVITY_TYPES = [
   { id: 1, name: "Diksar", category: "Diklat", points: 15, description: "Diklat dasar fotografi" },
   { id: 2, name: "Pameris Pameran Prapel", category: "Pameran", points: 10, description: "Pameris dalam pameran prapel" },
@@ -121,7 +121,6 @@ export const ACTIVITY_TYPES = [
 ];
 
 // ─── Supabase-only CRUD Helpers ───────────────────────────────────
-
 async function sbGetMembers(): Promise<LocalMember[]> {
   const base = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
   try {
@@ -279,14 +278,7 @@ async function sbAddMember(m: Omit<LocalMember, "isPreRegistered">): Promise<voi
   await supabase.from("members").insert([{ nsa: m.nsa, name: m.name, angkatan: m.angkatan, divisi: m.divisi, role: m.role, password: m.password, email: m.email }]);
 }
 
-async function sbUpdateMember(nsa: string, updates: Partial<LocalMember>) {
-  const payload: any = {};
-  if (updates.password !== undefined) payload.password = updates.password;
-  if (updates.email !== undefined) payload.email = updates.email;
-  await supabase.from("members").update(payload).eq("nsa", nsa);
-}
-
-// ─── Standalone Pemandu CRUD (admin-managed pemandus not in members) ──
+// ─── Standalone Pemandu CRUD ──────────────────────────────────────
 interface StandalonePemandu {
   id: number;
   fullName: string;
@@ -441,7 +433,6 @@ export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & 
 }
 
 export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
-  console.log("Mencoba update ke Supabase untuk:", nsa);
   const { data, error } = await supabase
     .from("members")
     .update(updates)
@@ -453,7 +444,6 @@ export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
   }
 
   if (!data || data.length === 0) {
-    console.log("Data tidak ada, mencoba INSERT baris baru...");
     const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa === nsa);
     if (localMember) {
       const { error: insertError } = await supabase.from("members").insert([{
@@ -474,29 +464,22 @@ export function getLocations(): string[] {
 }
 
 export async function getMembers(): Promise<LocalMember[]> {
-  // Always include pre-registered members from memory
   const base = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
-
-  // Try to get additional members from Supabase
   try {
     const { data } = await supabase.from("members").select("*");
     if (data && data.length > 0) {
       const fromDb = data.map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
-      // Merge: pre-registered + any extra from DB (avoid duplicates)
       const existingNsas = new Set(base.map((m) => m.nsa.toLowerCase()));
       return [...base, ...fromDb.filter((m: LocalMember) => !existingNsas.has(m.nsa.toLowerCase()))];
     }
-  } catch { /* ignore, return pre-registered only */ }
-
+  } catch { /* ignore */ }
   return base;
 }
 
 export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefined> {
-  // Always check in-memory pre-registered list first (never lost, works offline)
   const preReg = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
   if (preReg) return { ...preReg, isPreRegistered: true };
 
-  // Fallback: try Supabase for dynamically added members
   try {
     const { data } = await supabase.from("members").select("*").eq("nsa", nsa).single();
     if (data) return { ...toCamel(data), isPreRegistered: true };
@@ -548,7 +531,7 @@ export function useLocalData() {
   const [standalonePemandus, setStandalonePemandus] = useState<StandalonePemandu[]>([]);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // Load all data from Supabase
+  // Load all data from Supabase (Aman & Bebas Looping)
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -581,16 +564,6 @@ export function useLocalData() {
     load();
     return () => { cancelled = true; };
   }, [version]);
-
-  // Seed members if empty
-  useEffect(() => {
-    if (members.length === 0 && !dbError) {
-      seedMembers().catch((e) => {
-        console.error("[seedMembers] Failed:", e?.message || e);
-        setDbError("Gagal menyimpan data anggota");
-      }).then(() => refresh());
-    }
-  }, [members.length, dbError]);
 
   // ─── CRUD Operations ────────────────────────────────────────────
   const addRegistrant = async (data: Omit<LocalRegistrant, "id" | "createdAt">) => {
@@ -674,7 +647,7 @@ export function useLocalData() {
       verified: acts.filter((a) => a.status === "verified").length,
       pending: acts.filter((a) => a.status === "pending").length,
       rejected: acts.filter((a) => a.status === "rejected").length,
-      count: acts.reduce,
+      count: acts.length,
     };
   };
 
@@ -682,18 +655,15 @@ export function useLocalData() {
     version,
     refresh,
     dbError,
-    // Data arrays
+    members,
     registrants,
     activities,
-    members,
-    pemandus: allPemandus,
     kelompoks,
     kelompokAssignments,
     pemanduAssignments,
     locations,
-    activityTypes: ACTIVITY_TYPES,
-    verifiedMembers: members.filter((m) => m.isPreRegistered),
-    // CRUD
+    standalonePemandus,
+    allPemandus,
     addRegistrant,
     addActivity,
     updateActivity,
@@ -703,68 +673,14 @@ export function useLocalData() {
     addKelompok,
     updateKelompok,
     deleteKelompok,
-    // Pemandu CRUD
-    addPemandu,
-    updatePemandu,
-    deletePemandu,
-    // Verified member CRUD
-    addVerifiedMember,
-    updateVerifiedMember,
-    deleteVerifiedMember,
-    // Queries
     getRegistrantByEmail,
     getRegistrantById,
-    getMemberByNSA: getMemberByNSA,
     getPemanduById,
     getKelompokForRegistrant,
     getPemandusForRegistrant,
     getKelompokNameForRegistrant,
-    getCUFOByPemandu,
     getActivitiesByRegistrant,
+    getCUFOByPemandu,
     getPointSummary,
   };
-}
-// Tambahkan di bagian paling bawah useLocalData.ts
-export async function verifyMemberLogin(nsa: string, passwordInput: string) {
-  try {
-    console.log("Mencoba login untuk:", nsa);
-    // Menggunakan .ilike agar NSA.123 sama dengan nsa.123
-    const { data: member, error } = await supabase
-      .from("members")
-      .select("*")
-      .ilike("nsa", nsa) 
-      .maybeSingle();
-
-    if (error) {
-      console.error("ERROR SUPABASE (LOGIN):", error);
-    }
-
-    if (member) {
-      console.log("Data ditemukan di Supabase:", member);
-      if (member.password === passwordInput) return member;
-      console.log("Tapi password salah!");
-      return false; 
-    }
-
-    console.log("Cek data lokal sebagai cadangan...");
-    const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa.toLowerCase() === nsa.toLowerCase());
-    if (localMember) {
-      if (localMember.password === passwordInput) return localMember;
-    }
-
-    if (member) {
-      // TAMBAHKAN BARIS INI UNTUK MELIHAT PERBEDAANNYA
-      console.log(`[CEK] Password di DB: "${member.password}" | Yang diketik: "${passwordInput}"`);
-
-      if (member.password === passwordInput) return member;
-      
-      console.log("Tapi password salah!");
-      return false; 
-    }
-
-    return false;
-  } catch (err) {
-    console.error("Gagal verifikasi login:", err);
-    return false;
-  }
 }

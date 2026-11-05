@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocalData } from "@/hooks/useLocalData";
+import { useLocalData, ACTIVITY_TYPES } from "@/hooks/useLocalData";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -36,7 +36,6 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
-import { useLocalData, ACTIVITY_TYPES } from "@/hooks/useLocalData";
 
 export default function PemanduDashboard() {
   const { user } = useAuth();

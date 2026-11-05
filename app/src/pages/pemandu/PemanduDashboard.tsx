@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
+import { useLocalData, ACTIVITY_TYPES } from "@/hooks/useLocalData";
 
 export default function PemanduDashboard() {
   const { user } = useAuth();
@@ -75,7 +76,7 @@ export default function PemanduDashboard() {
       .filter((a) => cufoIds.includes(a.registrantId) && a.status === "pending")
       .map((a) => {
         const reg = local.registrants.find((r) => r.id === a.registrantId);
-        const atype = local.activityTypes.find((t) => t.id === a.activityTypeId);
+        const atype = (ACTIVITY_TYPES || []).find((t) => t.id === a.activityTypeId);
         return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
       })
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
@@ -89,7 +90,7 @@ export default function PemanduDashboard() {
       .filter((a) => cufoIds.includes(a.registrantId))
       .map((a) => {
         const reg = local.registrants.find((r) => r.id === a.registrantId);
-        const atype = local.activityTypes.find((t) => t.id === a.activityTypeId);
+        const atype = (ACTIVITY_TYPES || []).find((t) => t.id === a.activityTypeId);
         return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
       })
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());

@@ -468,14 +468,10 @@ const summary = useMemo(() => {
         <div className="max-w-2xl mx-auto px-4 py-12">
           <Card className="text-center p-8">
             <UserPlus className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Daftar sebagai CUFO</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h2>
             <p className="text-gray-600 mb-6">
-              Anda belum terdaftar sebagai CUFO. Daftarkan diri Anda untuk mulai menginput kegiatan dan melihat poin.
+              Tahukah kamu, bahwa bukupoinufo.web.id baru diluncurkan seminggu sebelum First Gathering CUFO XXXIV dan masih dalam tahap penyempurnaan?
             </p>
-            <Button onClick={() => setShowRegister(true)} className="bg-red-600 hover:bg-red-700">
-              <UserPlus className="h-4 w-4 mr-2" />
-              Daftar Sekarang
-            </Button>
           </Card>
         </div>
       </MainLayout>

@@ -8,7 +8,6 @@ import { LogIn, ArrowLeft, Loader2, Users } from "lucide-react";
 import { Link } from "react-router";
 import { seedMembers, getMemberByNSA } from "@/hooks/useLocalData";
 import { verifyRegistrantLogin } from "@/lib/googleSheets";
-import { verifyMemberLogin } from "@/hooks/useLocalData";
 
 // ─── Session Management ───────────────────────────────────────────
 interface SessionUser {
@@ -49,26 +48,22 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-// ─── Login: Anggota (NSA-based) ─────────────────────────────────
+  // ─── Login: Anggota (NSA-based) ─────────────────────────────────
   const handleAnggotaLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // 1. Validasi agar input tidak kosong
     if (!nsaUsername.trim() || !nsaPassword.trim()) {
       setError("Username dan password wajib diisi");
       return;
     }
 
-    // Aktifkan loading SEBELUM melakukan verifikasi asinkron
     setLoading(true);
 
     try {
-      // 2. AMBIL DATA DARI SUPABASE
-      const member = await verifyMemberLogin(nsaUsername.trim(), nsaPassword);
+      const member = await getMemberByNSA(nsaUsername.trim());
 
-      if (member) {
-        // 3. BERHASIL LOGIN: Cukup gunakan setSession (seperti Calon Anggota)
+      if (member && member.password === nsaPassword) {
         setSession({
           id: member.nsa,
           name: member.name,
@@ -78,12 +73,11 @@ export default function Login() {
           isPreRegistered: true,
         });
       } else {
-        // 4. GAGAL LOGIN
         setError("Password salah atau NSA tidak ditemukan.");
       }
     } catch (err) {
       setError("Terjadi kesalahan pada sistem.");
-    } finally { 
+    } finally {
       setLoading(false);
     }
   };
@@ -98,21 +92,27 @@ export default function Login() {
       return;
     }
 
-    // Verify registrant: accepts either NIM (first login) or changed password
-    const registrant = await verifyRegistrantLogin(caEmail.trim(), caNim.trim());
-    if (!registrant) {
-      setError("Email atau NIM/Password salah. Password awal = NIM Anda.");
-      return;
-    }
-
     setLoading(true);
-    setSession({
-      id: String(registrant.id),
-      name: registrant.fullName,
-      email: registrant.email,
-      role: "user",
-      isPreRegistered: false,
-    });
+
+    try {
+      const registrant = await verifyRegistrantLogin(caEmail.trim(), caNim.trim());
+      if (!registrant) {
+        setError("Email atau NIM/Password salah. Password awal = NIM Anda.");
+        return;
+      }
+
+      setSession({
+        id: String(registrant.id),
+        name: registrant.fullName,
+        email: registrant.email,
+        role: "user",
+        isPreRegistered: false,
+      });
+    } catch (err) {
+      setError("Terjadi kesalahan saat memproses login.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -134,8 +134,8 @@ export default function Login() {
 
           <CardContent className="space-y-4">
             {!loading && error && (
-  <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">{error}</div>
-)}
+              <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">{error}</div>
+            )}
 
             <Tabs defaultValue="anggota" onValueChange={() => setError("")}>
               <TabsList className="grid w-full grid-cols-2">

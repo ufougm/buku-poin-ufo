@@ -402,7 +402,7 @@ const PSDM_PIN = "UFOADMIN2024";
 // ─── Exported Functions ───────────────────────────────────────────
 export function verifyMember(serialNumber: string, role: "pemandu" | "psdm", pin?: string): VerifiedMember | null {
   const members = PRE_REGISTERED_MEMBERS.filter((m) => m.role === role || (role === "psdm" && m.role === "psdm_pemandu"));
-  const member = members.find((m) => m.nsa === serialNumber);
+  const member = members?.find?.((m) => m.nsa === serialNumber);
   if (!member) return null;
   if (role === "psdm" && pin !== PSDM_PIN) return null;
   return { serialNumber: member.nsa, fullName: member.name, email: member.email || "", role };
@@ -477,7 +477,7 @@ export async function getMembers(): Promise<LocalMember[]> {
 }
 
 export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefined> {
-  const preReg = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
+  const preReg = PRE_REGISTERED_MEMBERS?.find?.((m) => m.nsa.toLowerCase() === nsa.toLowerCase());
   if (preReg) return { ...preReg, isPreRegistered: true };
 
   try {
@@ -618,10 +618,10 @@ export function useLocalData() {
   const memberPemandus = getPemandusFromMembers(members);
   const allPemandus = [...memberPemandus, ...standalonePemandus.map((p) => ({ ...p, status: "active" as const, userId: 0 }))];
 
-  const getRegistrantByEmail = (email: string) => registrants.find((r) => r.email.toLowerCase() === email.toLowerCase());
-  const getRegistrantById = (id: number) => registrants.find((r) => r.id === id);
-  const getPemanduById = (id: number) => allPemandus.find((p) => p.id === id);
-  const getKelompokForRegistrant = (registrantId: number) => kelompoks.find((k) => kelompokAssignments.some((ka) => ka.registrantId === registrantId && ka.kelompokId === k.id));
+  const getRegistrantByEmail = (email: string) => registrants?.find?.((r) => r.email.toLowerCase() === email.toLowerCase());
+  const getRegistrantById = (id: number) => registrants?.find?.((r) => r.id === id);
+  const getPemanduById = (id: number) => allPemandus?.find?.((p) => p.id === id);
+  const getKelompokForRegistrant = (registrantId: number) => kelompoks?.find?.((k) => kelompokAssignments.some((ka) => ka.registrantId === registrantId && ka.kelompokId === k.id));
   const getPemandusForRegistrant = (registrantId: number) => {
     const k = getKelompokForRegistrant(registrantId);
     if (!k) return [];
@@ -635,7 +635,7 @@ export function useLocalData() {
     return kelompokAssignments
       .filter((ka) => kelompokIds.includes(ka.kelompokId))
       .map((ka) => {
-        const reg = registrants.find((r) => r.id === ka.registrantId);
+        const reg = registrants?.find?.((r) => r.id === ka.registrantId);
         return reg ? { registrantId: reg.id, registrantName: reg.fullName, registrantEmail: reg.email, registrantYear: reg.year, registrantMajor: reg.major } : null;
       })
       .filter(Boolean);

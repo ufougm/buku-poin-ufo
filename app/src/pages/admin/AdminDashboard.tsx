@@ -79,8 +79,8 @@ function safeCompute(local: any) {
       .sort((a: any, b: any) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime())
       .slice(0, 10)
       .map((a: any) => {
-        const reg = registrants.find((r: any) => r.id === a.registrantId);
-        const atype = (local.activityTypes || []).find((t: any) => t.id === a.activityTypeId);
+        const reg = registrants?.find?.((r: any) => r.id === a.registrantId);
+        const atype = (local.activityTypes || [])?.find?.((t: any) => t.id === a.activityTypeId);
         return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
       });
 
@@ -108,16 +108,16 @@ function safeCompute(local: any) {
     });
 
     const allAssignments = kelompokAssignments.map((ka: any) => {
-      const kelompok = kelompoks.find((k: any) => k.id === ka.kelompokId);
-      const reg = registrants.find((r: any) => r.id === ka.registrantId);
-      const pemanduNames = kelompok ? (kelompok.pemanduIds || []).map((pid: number) => pemandus.find((p: any) => p.id === pid)?.fullName || "-").join(" & ") : "-";
+      const kelompok = kelompoks?.find?.((k: any) => k.id === ka.kelompokId);
+      const reg = registrants?.find?.((r: any) => r.id === ka.registrantId);
+      const pemanduNames = kelompok ? (kelompok.pemanduIds || []).map((pid: number) => pemandus?.find?.((p: any) => p.id === pid)?.fullName || "-").join(" & ") : "-";
       return { assignmentId: ka.id, kelompokId: ka.kelompokId, kelompokName: kelompok?.name || "-", pemanduNames, registrantId: ka.registrantId, registrantName: reg?.fullName || "-", registrantEmail: reg?.email || "-", registrantYear: reg?.year || "-", registrantMajor: reg?.major || "-" };
     });
 
     const kelompokData = kelompoks.map((k: any) => {
-  const p1 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[0]);
-  const p2 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[1]);
-  const p3 = pemandus.find((p: any) => p.id === (k.pemanduIds || [])[2]); // <-- Tambahkan baris ini
+  const p1 = pemandus?.find?.((p: any) => p.id === (k.pemanduIds || [])[0]);
+  const p2 = pemandus?.find?.((p: any) => p.id === (k.pemanduIds || [])[1]);
+  const p3 = pemandus?.find?.((p: any) => p.id === (k.pemanduIds || [])[2]); // <-- Tambahkan baris ini
   
   const cufoCount = kelompokAssignments.filter((ka: any) => ka.kelompokId === k.id).length;
   

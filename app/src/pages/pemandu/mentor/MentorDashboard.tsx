@@ -48,7 +48,7 @@ export default function MentorDashboard() {
   const myMentor = useMemo(() => {
     const mockUser = user as any;
     if (mockUser?.mentorId) {
-      return local.mentors.find((m) => m.id === Number(mockUser.mentorId)) || null;
+      return local.mentors?.find?.((m) => m.id === Number(mockUser.mentorId)) || null;
     }
     return null;
   }, [user, local.mentors]);
@@ -66,8 +66,8 @@ export default function MentorDashboard() {
     return local.activities
       .filter((a) => menteeIds.includes(a.registrantId) && a.status === "pending")
       .map((a) => {
-        const reg = local.registrants.find((r) => r.id === a.registrantId);
-        const atype = local.activityTypes.find((t) => t.id === a.activityTypeId);
+        const reg = local.registrants?.find?.((r) => r.id === a.registrantId);
+        const atype = local.activityTypes?.find?.((t) => t.id === a.activityTypeId);
         return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
       })
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());

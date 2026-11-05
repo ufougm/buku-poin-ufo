@@ -136,7 +136,7 @@ export default function Profile() {
       // TAMBAHKAN KATA await DI BARIS INI 👇
       const membersData = await getMembers(); 
       
-      const member = Array.isArray(membersData) ? membersData.find((m) => m.nsa === user.id) : null;
+      const member = Array.isArray(membersData) ? membersData?.find?.((m) => m.nsa === user.id) : null;
       
       if (member) {
         if (trimmedUsername !== user.id) {
@@ -176,7 +176,7 @@ export default function Profile() {
       }
     } else {
       // Free signup user: can change both username and password
-      const freeUser = (getFreeUsers() || []).find((u: any) => u.username.toLowerCase() === user.id.toLowerCase());
+      const freeUser = (getFreeUsers() || [])?.find?.((u: any) => u.username.toLowerCase() === user.id.toLowerCase());
       if (!freeUser) {
         setError("Data pengguna tidak ditemukan.");
         return;

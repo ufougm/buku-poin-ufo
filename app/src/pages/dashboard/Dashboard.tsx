@@ -162,7 +162,7 @@ console.log("Cek HP Pemandu 1:", pemandu1?.phone);
   useEffect(() => {
     async function ensureRegistrant() {
       if (!user?.name) return;
-      let found = local.registrants.find((r) =>
+      let found = local.registrants?.find?.((r) =>
         r.fullName.toLowerCase().includes(user.name!.toLowerCase()) ||
         user.name!.toLowerCase().includes(r.fullName.toLowerCase())
       );
@@ -203,7 +203,7 @@ const summary = useMemo(() => {
   };
 }, [myRegistrant, refreshTick, local]);
 
-  const selectedType = local.activityTypes.find((t) => t.id === Number(activityTypeId));
+  const selectedType = local.activityTypes?.find?.((t) => t.id === Number(activityTypeId));
   const requiresRole = selectedType?.requiresRole === "yes";
 
   // Photo upload handler with compression
@@ -785,7 +785,7 @@ const summary = useMemo(() => {
                   </TableHeader>
                   <TableBody>
                     {activities.map((activity) => {
-                      const atype = local.activityTypes.find((t) => t.id === activity.activityTypeId);
+                      const atype = local.activityTypes?.find?.((t) => t.id === activity.activityTypeId);
                       return (
                         <TableRow key={activity.id}>
                           <TableCell className="font-medium">

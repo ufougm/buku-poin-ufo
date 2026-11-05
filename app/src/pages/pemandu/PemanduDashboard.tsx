@@ -53,7 +53,7 @@ export default function PemanduDashboard() {
     if (!user?.name) return null;
 
     // Look up pemandu by matching user's name
-    const ditemukan = local.pemandus.find(
+    const ditemukan = local.pemandus?.find?.(
       (m) => m.fullName.toLowerCase() === user.name!.toLowerCase()
     );
 
@@ -74,8 +74,8 @@ export default function PemanduDashboard() {
     return local.activities
       .filter((a) => cufoIds.includes(a.registrantId) && a.status === "pending")
       .map((a) => {
-        const reg = local.registrants.find((r) => r.id === a.registrantId);
-        const atype = (ACTIVITY_TYPES || []).find((t) => t.id === a.activityTypeId);
+        const reg = local.registrants?.find?.((r) => r.id === a.registrantId);
+        const atype = (ACTIVITY_TYPES || [])?.find?.((t) => t.id === a.activityTypeId);
         return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
       })
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
@@ -88,8 +88,8 @@ export default function PemanduDashboard() {
     return local.activities
       .filter((a) => cufoIds.includes(a.registrantId))
       .map((a) => {
-        const reg = local.registrants.find((r) => r.id === a.registrantId);
-        const atype = (ACTIVITY_TYPES || []).find((t) => t.id === a.activityTypeId);
+        const reg = local.registrants?.find?.((r) => r.id === a.registrantId);
+        const atype = (ACTIVITY_TYPES || [])?.find?.((t) => t.id === a.activityTypeId);
         return { ...a, registrantName: reg?.fullName || "-", activityTypeName: atype?.name || "-" };
       })
       .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());

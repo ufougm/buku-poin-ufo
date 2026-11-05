@@ -120,242 +120,6 @@ export const ACTIVITY_TYPES = [
   { id: 30, name: "Kegiatan lain Sesuai Kebijakan/Persetujuan Ketua UFO", category: "Lain-lain", points: 0, description: "Sesuai kebijakan/persetujuan Ketua UFO" },
 ];
 
-// ─── Supabase-only CRUD Helpers ───────────────────────────────────
-async function sbGetMembers(): Promise<LocalMember[]> {
-  const base = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
-  try {
-    const { data } = await supabase.from("members").select("*");
-    if (data && data.length > 0) {
-      const fromDb = data.map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
-      const existingNsas = new Set(base.map((m) => m.nsa.toLowerCase()));
-      return [...base, ...fromDb.filter((m: LocalMember) => !existingNsas.has(m.nsa.toLowerCase()))];
-    }
-  } catch { /* return pre-registered only */ }
-  return base;
-}
-
-async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
-  try {
-    const { data } = await supabase.from("registrants").select("*").order("id", { ascending: true });
-    return (data || []).map((r: any) => ({
-      id: r.id,
-      fullName: r.full_name || "",
-      phone: r.phone || "",
-      email: r.email || "",
-      nim: r.nim || "",
-      password: r.password || "",
-      year: r.year || "",
-      major: r.major || "",
-      whatsapp: r.whatsapp || "",
-      asalDaerah: r.asal_daerah || "",
-      domisili: r.domisili || "",
-      genreFoto: r.genre_foto || "",
-      status: r.status || "",
-      createdAt: r.created_at || "",
-    }));
-  } catch { return []; }
-}
-
-async function sbGetActivities(): Promise<LocalActivity[]> {
-  try {
-    const { data } = await supabase.from("activities").select("*").order("id", { ascending: true });
-    return (data || []).map((a: any) => toCamel(a));
-  } catch { return []; }
-}
-
-async function sbGetKelompoks(): Promise<LocalKelompok[]> {
-  try {
-    const { data } = await supabase.from("kelompoks").select("*");
-    return (data || []).map((k: any) => {
-      const formatted = toCamel(k);
-      return {
-        ...formatted,
-        pemanduIds: Array.isArray(formatted.pemanduIds) ? formatted.pemanduIds : [],
-      };
-    });
-  } catch { return []; }
-}
-
-async function sbGetKelompokAssignments(): Promise<LocalKelompokAssignment[]> {
-  try {
-    const { data } = await supabase.from("kelompok_assignments").select("*");
-    return (data || []).map((ka: any) => toCamel(ka));
-  } catch { return []; }
-}
-
-async function sbGetPemanduAssignments(): Promise<LocalPemanduAssignment[]> {
-  try {
-    const { data } = await supabase.from("pemandu_assignments").select("*");
-    return (data || []).map((a: any) => toCamel(a));
-  } catch { return []; }
-}
-
-async function sbGetLocations(): Promise<string[]> {
-  try {
-    const { data } = await supabase.from("locations").select("name");
-    if (!data || data.length === 0) return DEFAULT_LOCATIONS;
-    return data.map((d: any) => d.name);
-  } catch { return DEFAULT_LOCATIONS; }
-}
-
-// ─── Write Operations ─────────────────────────────────────────────
-async function sbAddRegistrant(r: Omit<LocalRegistrant, "id" | "createdAt">): Promise<LocalRegistrant> {
-  const now = new Date().toISOString();
-  const { data, error } = await supabase.from("registrants").insert([{ ...r, created_at: now }]).select().single();
-  if (error) throw error;
-  return toCamel(data);
-}
-
-async function sbAddActivity(a: Omit<LocalActivity, "id" | "submittedAt">): Promise<LocalActivity> {
-  const now = new Date().toISOString();
-  const payload = {
-    registrant_id: a.registrantId,
-    activity_type_id: a.activityTypeId,
-    activity_name: a.activityName,
-    activity_date: a.activityDate,
-    activity_date_end: a.activityDateEnd,
-    role: a.role,
-    location: a.location,
-    documentation_images: a.documentationImages,
-    points: a.points,
-    status: a.status,
-    submitted_at: now,
-  };
-  const { data, error } = await supabase.from("activities").insert([payload]).select().single();
-  if (error) throw error;
-  return toCamel(data);
-}
-
-async function sbUpdateActivity(id: number, updates: Partial<LocalActivity>) {
-  const payload: any = {};
-  if (updates.status !== undefined) payload.status = updates.status;
-  if (updates.verifiedBy !== undefined) payload.verified_by = updates.verifiedBy;
-  if (updates.verifiedAt !== undefined) payload.verified_at = updates.verifiedAt;
-  if (updates.notes !== undefined) payload.notes = updates.notes;
-  const { error } = await supabase.from("activities").update(payload).eq("id", id);
-  if (error) throw error;
-}
-
-async function sbDeleteRegistrant(id: number) {
-  await supabase.from("registrants").delete().eq("id", id);
-  await supabase.from("activities").delete().eq("registrant_id", id);
-  await supabase.from("kelompok_assignments").delete().eq("registrant_id", id);
-  await supabase.from("pemandu_assignments").delete().eq("registrant_id", id);
-}
-
-async function sbAssignToKelompok(registrantId: number, kelompokId: number) {
-  const now = new Date().toISOString();
-  await supabase.from("kelompok_assignments").delete().eq("registrant_id", registrantId);
-  await supabase.from("pemandu_assignments").delete().eq("registrant_id", registrantId);
-  await supabase.from("kelompok_assignments").insert([{ kelompok_id: kelompokId, registrant_id: registrantId, assigned_at: now }]);
-  const { data: kData } = await supabase.from("kelompoks").select("pemandu_ids").eq("id", kelompokId).single();
-  if (kData?.pemandu_ids && Array.isArray(kData.pemandu_ids)) {
-    const newPas = kData.pemandu_ids.map((pid: number) => ({ pemandu_id: pid, registrant_id: registrantId, assigned_at: now }));
-    await supabase.from("pemandu_assignments").insert(newPas);
-  }
-}
-
-async function sbRemoveFromKelompok(registrantId: number) {
-  await supabase.from("kelompok_assignments").delete().eq("registrant_id", registrantId);
-  await supabase.from("pemandu_assignments").delete().eq("registrant_id", registrantId);
-}
-
-async function sbAddKelompok(k: Omit<LocalKelompok, "id">): Promise<LocalKelompok> {
-  const { data, error } = await supabase.from("kelompoks").insert([{ name: k.name, pemandu_ids: k.pemanduIds }]).select().single();
-  if (error) throw error;
-  const formatted = toCamel(data);
-  return { ...formatted, pemanduIds: Array.isArray(formatted.pemanduIds) ? formatted.pemanduIds : [] };
-}
-
-async function sbUpdateKelompok(id: number, updates: Partial<LocalKelompok>) {
-  const payload: any = {};
-  if (updates.name !== undefined) payload.name = updates.name;
-  if (updates.pemanduIds !== undefined) payload.pemandu_ids = updates.pemanduIds;
-  const { error } = await supabase.from("kelompoks").update(payload).eq("id", id);
-  if (error) throw error;
-}
-
-async function sbDeleteKelompok(id: number) {
-  await supabase.from("kelompok_assignments").delete().eq("kelompok_id", id);
-  await supabase.from("pemandu_assignments").delete().eq("kelompok_id", id);
-  await supabase.from("kelompoks").delete().eq("id", id);
-}
-
-async function sbAddMember(m: Omit<LocalMember, "isPreRegistered">): Promise<void> {
-  await supabase.from("members").insert([{ nsa: m.nsa, name: m.name, angkatan: m.angkatan, divisi: m.divisi, role: m.role, password: m.password, email: m.email }]);
-}
-
-// ─── Standalone Pemandu CRUD ──────────────────────────────────────
-interface StandalonePemandu {
-  id: number;
-  fullName: string;
-  email: string;
-  expertise: string;
-  maxMentees: number;
-  phone?: string;
-  createdAt: string;
-}
-
-export async function addPemandu(data: { userId: number; fullName: string; email: string; expertise: string; maxMentees: number; phone?: string }) {
-  const { error } = await supabase.from("standalone_pemandus").insert([{
-    full_name: data.fullName,
-    email: data.email,
-    expertise: data.expertise,
-    max_mentees: data.maxMentees,
-    phone: data.phone,
-    created_at: new Date().toISOString(),
-  }]);
-  if (error) throw error;
-}
-
-export async function updatePemandu(id: number, updates: Partial<StandalonePemandu>) {
-  const payload: any = {};
-  if (updates.fullName !== undefined) payload.full_name = updates.fullName;
-  if (updates.email !== undefined) payload.email = updates.email;
-  if (updates.expertise !== undefined) payload.expertise = updates.expertise;
-  if (updates.maxMentees !== undefined) payload.max_mentees = updates.maxMentees;
-  if (updates.phone !== undefined) payload.phone = updates.phone;
-  const { error } = await supabase.from("standalone_pemandus").update(payload).eq("id", id);
-  if (error) throw error;
-}
-
-export async function deletePemandu(id: number) {
-  const { error } = await supabase.from("standalone_pemandus").delete().eq("id", id);
-  if (error) throw error;
-}
-
-// ─── Verified Member CRUD ─────────────────────────────────────────
-export async function addVerifiedMember(data: { serialNumber: string; fullName: string; email: string; role: "pemandu" | "psdm" }) {
-  const { data: existing } = await supabase.from("members").select("nsa").eq("nsa", data.serialNumber).single();
-  if (existing) throw new Error("Nomor seri sudah terdaftar");
-  const { error } = await supabase.from("members").insert([{
-    nsa: data.serialNumber,
-    name: data.fullName,
-    angkatan: 0,
-    divisi: "",
-    role: data.role,
-    password: "123456",
-    email: data.email,
-  }]);
-  if (error) throw error;
-}
-
-export async function updateVerifiedMember(serialNumber: string, updates: { serialNumber: string; fullName: string; email: string; role: "pemandu" | "psdm" }) {
-  const { error } = await supabase.from("members").update({
-    nsa: updates.serialNumber,
-    name: updates.fullName,
-    email: updates.email,
-    role: updates.role,
-  }).eq("nsa", serialNumber);
-  if (error) throw error;
-}
-
-export async function deleteVerifiedMember(serialNumber: string) {
-  const { error } = await supabase.from("members").delete().eq("nsa", serialNumber);
-  if (error) throw error;
-}
-
-// ─── Seed Members ─────────────────────────────────────────────────
 export const PRE_REGISTERED_MEMBERS: Omit<LocalMember, "isPreRegistered">[] = [
   { nsa: "NSA.3224.018.1089", name: "MUHAMMAD NAUFAL HAFIZH", angkatan: 32, divisi: "Wakil Ketua", role: "psdm", password: "1089" },
   { nsa: "NSA.3224.027.1098", name: "NAUFAL REZA AL LUTHFI", angkatan: 32, divisi: "Ketua", role: "psdm", password: "1098" },
@@ -404,97 +168,6 @@ const DEFAULT_LOCATIONS = [
   "Taman Pelangi Jogja", "Lapangan Pancasila UGM", "Gelanggang Mahasiswa UGM",
 ];
 
-const PSDM_PIN = "UFOADMIN2024";
-
-// ─── Exported Functions ───────────────────────────────────────────
-export function verifyMember(serialNumber: string, role: "pemandu" | "psdm", pin?: string): VerifiedMember | null {
-  const members = PRE_REGISTERED_MEMBERS.filter((m) => m.role === role || (role === "psdm" && m.role === "psdm_pemandu"));
-  const member = members.find((m) => m.nsa === serialNumber);
-  if (!member) return null;
-  if (role === "psdm" && pin !== PSDM_PIN) return null;
-  return { serialNumber: member.nsa, fullName: member.name, email: member.email || "", role };
-}
-
-export function determineRole(angkatan: number, divisi: string): LocalMember["role"] | null {
-  const d = divisi.trim().toLowerCase();
-  if (angkatan === 32 && (d === "psdm" || d === "ketua" || d === "wakil ketua")) return "psdm";
-  if (angkatan === 33 && d === "psdm") return "psdm_pemandu";
-  if (angkatan === 33 && d !== "psdm") return "pemandu";
-  return null;
-}
-
-export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & { nsa: string })[] {
-  const safeMembers = Array.isArray(members) ? members : [];
-  return safeMembers
-    .filter((m) => m && (m.role === "pemandu" || m.role === "psdm_pemandu"))
-    .map((m) => ({
-      id: parseInt((m.nsa || "").replace(/\D/g, "").slice(-4)) || 0,
-      userId: 0,
-      fullName: m.name || "",
-      email: m.email || m.nsa || "",
-      nsa: m.nsa || "",
-      expertise: `${m.divisi || ""} (Angkatan ${m.angkatan || ""})`,
-      maxMentees: 20,
-      phone: m.phone || "",
-      status: "active" as const,
-    }));
-}
-
-export async function updateMember(nsa: string, updates: Partial<LocalMember>) {
-  const { data, error } = await supabase
-    .from("members")
-    .update(updates)
-    .eq("nsa", nsa)
-    .select();
-
-  if (error) {
-    console.error("ERROR SUPABASE (UPDATE):", error);
-  }
-
-  if (!data || data.length === 0) {
-    const localMember = PRE_REGISTERED_MEMBERS.find(m => m.nsa === nsa);
-    if (localMember) {
-      await supabase.from("members").insert([{
-        nsa: localMember.nsa,
-        name: localMember.name,
-        role: localMember.role,
-        angkatan: localMember.angkatan,
-        divisi: localMember.divisi,
-        password: updates.password || localMember.password,
-      }]);
-    }
-  }
-}
-
-export function getLocations(): string[] {
-  return DEFAULT_LOCATIONS;
-}
-
-export async function getMembers(): Promise<LocalMember[]> {
-  const base = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
-  try {
-    const { data } = await supabase.from("members").select("*");
-    if (data && data.length > 0) {
-      const fromDb = data.map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
-      const existingNsas = new Set(base.map((m) => m.nsa.toLowerCase()));
-      return [...base, ...fromDb.filter((m: LocalMember) => !existingNsas.has(m.nsa.toLowerCase()))];
-    }
-  } catch { /* ignore */ }
-  return base;
-}
-
-export async function getMemberByNSA(nsa: string): Promise<LocalMember | undefined> {
-  const preReg = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === (nsa || "").toLowerCase());
-  if (preReg) return { ...preReg, isPreRegistered: true };
-
-  try {
-    const { data } = await supabase.from("members").select("*").eq("nsa", nsa).single();
-    if (data) return { ...toCamel(data), isPreRegistered: true };
-  } catch { /* ignore */ }
-
-  return undefined;
-}
-
 export async function verifyMemberLogin(nsa: string, pass: string): Promise<LocalMember | null> {
   const nsaClean = (nsa || "").trim().toLowerCase();
   const local = PRE_REGISTERED_MEMBERS.find((m) => m.nsa.toLowerCase() === nsaClean);
@@ -517,29 +190,18 @@ export async function verifyMemberLogin(nsa: string, pass: string): Promise<Loca
   return null;
 }
 
-export async function seedMembers() {
-  try {
-    const { count } = await supabase.from("members").select("*", { count: "exact", head: true });
-    if (count && count > 0) return;
-    for (const m of PRE_REGISTERED_MEMBERS) {
-      await sbAddMember(m);
-    }
-  } catch (e) {
-    console.error("[seedMembers] Failed:", e);
-  }
-}
-
-export function getPsdmMembers(members: LocalMember[]): LocalPemandu[] {
+export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & { nsa: string })[] {
   const safeMembers = Array.isArray(members) ? members : [];
   return safeMembers
-    .filter((m) => m && (m.role === "psdm" || m.role === "psdm_pemandu"))
+    .filter((m) => m && (m.role === "pemandu" || m.role === "psdm_pemandu"))
     .map((m) => ({
       id: parseInt((m.nsa || "").replace(/\D/g, "").slice(-4)) || 0,
       userId: 0,
       fullName: m.name || "",
       email: m.email || m.nsa || "",
+      nsa: m.nsa || "",
       expertise: `${m.divisi || ""} (Angkatan ${m.angkatan || ""})`,
-      maxMentees: 10,
+      maxMentees: 20,
       phone: m.phone || "",
       status: "active" as const,
     }));
@@ -550,7 +212,6 @@ export function useLocalData() {
   const [version, setVersion] = useState(0);
   const refresh = useCallback(() => setVersion((v) => v + 1), []);
 
-  // Data states (Selalu di-inisialisasi sebagai array kosong)
   const [members, setMembers] = useState<LocalMember[]>([]);
   const [registrants, setRegistrants] = useState<LocalRegistrant[]>([]);
   const [activities, setActivities] = useState<LocalActivity[]>([]);
@@ -561,24 +222,33 @@ export function useLocalData() {
   const [standalonePemandus, setStandalonePemandus] = useState<StandalonePemandu[]>([]);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // Load all data from Supabase
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
         setDbError(null);
         const [m, r, a, k, ka, pa, l, sp] = await Promise.all([
-          sbGetMembers(),
-          sbGetRegistrants(),
-          sbGetActivities(),
-          sbGetKelompoks(),
-          sbGetKelompokAssignments(),
-          sbGetPemanduAssignments(),
-          sbGetLocations(),
+          supabase.from("members").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
+          supabase.from("registrants").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
+          supabase.from("activities").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
+          supabase.from("kelompoks").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
+          supabase.from("kelompok_assignments").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
+          supabase.from("pemandu_assignments").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
+          supabase.from("locations").select("name").then(({ data }) => (data || []).map((d: any) => d.name)).catch(() => DEFAULT_LOCATIONS),
           supabase.from("standalone_pemandus").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
         ]);
         if (cancelled) return;
-        setMembers(Array.isArray(m) ? m : []);
+        
+        const mergedMembers = [...PRE_REGISTERED_MEMBERS.map(m => ({ ...m, isPreRegistered: true }))];
+        if (Array.isArray(m)) {
+          m.forEach(dbM => {
+            if (!mergedMembers.some(existing => existing.nsa.toLowerCase() === dbM.nsa?.toLowerCase())) {
+              mergedMembers.push({ ...dbM, isPreRegistered: true });
+            }
+          });
+        }
+
+        setMembers(mergedMembers);
         setRegistrants(Array.isArray(r) ? r : []);
         setActivities(Array.isArray(a) ? a : []);
         setKelompoks(Array.isArray(k) ? k : []);
@@ -587,7 +257,6 @@ export function useLocalData() {
         setLocations(Array.isArray(l) && l.length > 0 ? l : DEFAULT_LOCATIONS);
         setStandalonePemandus(Array.isArray(sp) ? sp : []);
       } catch (e: any) {
-        console.error("[useLocalData] Failed to load data:", e?.message || e);
         if (!cancelled) setDbError(e?.message || "Gagal terhubung ke database");
       }
     }
@@ -595,56 +264,6 @@ export function useLocalData() {
     return () => { cancelled = true; };
   }, [version]);
 
-  // ─── CRUD Operations ────────────────────────────────────────────
-  const addRegistrant = async (data: Omit<LocalRegistrant, "id" | "createdAt">) => {
-    const result = await sbAddRegistrant(data);
-    refresh();
-    return result;
-  };
-
-  const addActivity = async (data: Omit<LocalActivity, "id" | "submittedAt">) => {
-    const result = await sbAddActivity(data);
-    refresh();
-    return result;
-  };
-
-  const updateActivity = async (id: number, updates: Partial<LocalActivity>) => {
-    await sbUpdateActivity(id, updates);
-    refresh();
-  };
-
-  const deleteRegistrant = async (id: number) => {
-    await sbDeleteRegistrant(id);
-    refresh();
-  };
-
-  const assignRegistrantToKelompok = async (registrantId: number, kelompokId: number) => {
-    await sbAssignToKelompok(registrantId, kelompokId);
-    refresh();
-  };
-
-  const removeRegistrantFromKelompok = async (registrantId: number) => {
-    await sbRemoveFromKelompok(registrantId);
-    refresh();
-  };
-
-  const addKelompok = async (data: Omit<LocalKelompok, "id">) => {
-    const result = await sbAddKelompok(data);
-    refresh();
-    return result;
-  };
-
-  const updateKelompok = async (id: number, updates: Partial<LocalKelompok>) => {
-    await sbUpdateKelompok(id, updates);
-    refresh();
-  };
-
-  const deleteKelompok = async (id: number) => {
-    await sbDeleteKelompok(id);
-    refresh();
-  };
-
-  // ─── Safe Queries (Dilindungi dari error undefined/null) ───────
   const safeMembers = Array.isArray(members) ? members : [];
   const safeRegistrants = Array.isArray(registrants) ? registrants : [];
   const safeActivities = Array.isArray(activities) ? activities : [];
@@ -654,7 +273,7 @@ export function useLocalData() {
 
   const memberPemandus = getPemandusFromMembers(safeMembers);
   const allPemandus = [
-    ...(Array.isArray(memberPemandus) ? memberPemandus : []),
+    ...memberPemandus,
     ...safeStandalonePemandus.map((p) => ({ ...p, status: "active" as const, userId: 0 }))
   ];
 
@@ -702,7 +321,7 @@ export function useLocalData() {
       total: verifiedActs.reduce((s, a) => s + (a.points || 0), 0),
       verified: verifiedActs.length,
       pending: acts.filter((a) => a && a.status === "pending").length,
-      rejected: acts.filter((a) => a.status === "rejected").length,
+      rejected: acts.filter((a) => a && a.status === "rejected").length,
       count: acts.length,
     };
   };
@@ -720,15 +339,7 @@ export function useLocalData() {
     locations: Array.isArray(locations) && locations.length > 0 ? locations : DEFAULT_LOCATIONS,
     standalonePemandus: safeStandalonePemandus,
     allPemandus,
-    addRegistrant,
-    addActivity,
-    updateActivity,
-    deleteRegistrant,
-    assignRegistrantToKelompok,
-    removeRegistrantFromKelompok,
-    addKelompok,
-    updateKelompok,
-    deleteKelompok,
+    activityTypes: ACTIVITY_TYPES, // Disertakan agar aman dipanggil jika dibutuhkan
     getRegistrantByEmail,
     getRegistrantById,
     getPemanduById,

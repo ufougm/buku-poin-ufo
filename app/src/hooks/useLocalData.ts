@@ -137,10 +137,9 @@ async function sbGetMembers(): Promise<LocalMember[]> {
 async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
   try {
     const { data } = await supabase.from("registrants").select("*").order("id", { ascending: true });
-    return (data || [])?.map?.((r: any) => ({
+    return (data || []).map((r: any) => ({
       id: r.id,
-      full_name: r.fullName,
-      phone: r.phone,
+      fullName: r.full_name,
       email: r.email,
       nim: r.nim,
       password: r.password,
@@ -195,7 +194,21 @@ async function sbGetLocations(): Promise<string[]> {
 // ─── Write Operations ─────────────────────────────────────────────
 async function sbAddRegistrant(r: Omit<LocalRegistrant, "id" | "createdAt">): Promise<LocalRegistrant> {
   const now = new Date().toISOString();
-  const { data, error } = await supabase.from("registrants").insert([{ ...r, created_at: now }]).select().single();
+  const payload = {
+    full_name: r.fullName,
+    email: r.email,
+    nim: r.nim,
+    password: r.password,
+    year: r.year,
+    major: r.major,
+    whatsapp: r.whatsapp,
+    asal_daerah: r.asalDaerah,
+    domisili: r.domisili,
+    genre_foto: r.genreFoto,
+    status: r.status,
+    created_at: now,
+  };
+  const { data, error } = await supabase.from("registrants").insert([payload]).select().single();
   if (error) throw error;
   return toCamel(data);
 }

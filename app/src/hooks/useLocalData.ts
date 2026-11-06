@@ -157,9 +157,20 @@ async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
 
 async function sbGetActivities(): Promise<LocalActivity[]> {
   try {
-    const { data } = await supabase.from("activities").select("*").order("id", { ascending: true });
-    return (data || [])?.map?.((a: any) => toCamel(a));
-  } catch { return []; }
+    const { data, error } = await supabase
+      .from("activities")
+      .select("id, registrant_id, activity_type_id, activity_name, activity_date, activity_date_end, role, location, points, status, verified_by, verified_at, notes, submitted_at")
+      .order("id", { ascending: false })
+      .range(0, 999);
+    if (error) {
+      console.error("[activities]", error);
+      return [];
+    }
+    return (data || []).map((a: any) => toCamel(a));
+  } catch (e) {
+    console.error("[activities]", e);
+    return [];
+  }
 }
 
 async function sbGetKelompoks(): Promise<LocalKelompok[]> {

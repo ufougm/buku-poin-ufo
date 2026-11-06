@@ -139,7 +139,7 @@ async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
     const { data } = await supabase.from("registrants").select("*").order("id", { ascending: true });
     return (data || [])?.map?.((r: any) => ({
       id: r.id,
-      fullName: r.full_name,
+      full_name: r.fullName,
       phone: r.phone,
       email: r.email,
       nim: r.nim,

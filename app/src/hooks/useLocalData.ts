@@ -122,12 +122,12 @@ export const ACTIVITY_TYPES = [
 
 // ─── Supabase-only CRUD Helpers ───────────────────────────────────
 async function sbGetMembers(): Promise<LocalMember[]> {
-  const base = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
+  const base = PRE_REGISTERED_MEMBERS?.map?.((m) => ({ ...m, isPreRegistered: true }));
   try {
     const { data } = await supabase.from("members").select("*");
     if (data && data.length > 0) {
-      const fromDb = data.map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
-      const existingNsas = new Set(base.map((m) => m.nsa.toLowerCase()));
+      const fromDb = data?.map?.((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
+      const existingNsas = new Set(base?.map?.((m) => m.nsa.toLowerCase()));
       return [...base, ...fromDb.filter((m: LocalMember) => !existingNsas.has(m.nsa.toLowerCase()))];
     }
   } catch { /* return pre-registered only */ }
@@ -137,7 +137,7 @@ async function sbGetMembers(): Promise<LocalMember[]> {
 async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
   try {
     const { data } = await supabase.from("registrants").select("*").order("id", { ascending: true });
-    return (data || []).map((r: any) => ({
+    return (data || [])?.map?.((r: any) => ({
       id: r.id,
       fullName: r.full_name,
       phone: r.phone,
@@ -159,28 +159,28 @@ async function sbGetRegistrants(): Promise<LocalRegistrant[]> {
 async function sbGetActivities(): Promise<LocalActivity[]> {
   try {
     const { data } = await supabase.from("activities").select("*").order("id", { ascending: true });
-    return (data || []).map((a: any) => toCamel(a));
+    return (data || [])?.map?.((a: any) => toCamel(a));
   } catch { return []; }
 }
 
 async function sbGetKelompoks(): Promise<LocalKelompok[]> {
   try {
     const { data } = await supabase.from("kelompoks").select("*");
-    return (data || []).map((k: any) => toCamel(k));
+    return (data || [])?.map?.((k: any) => toCamel(k));
   } catch { return []; }
 }
 
 async function sbGetKelompokAssignments(): Promise<LocalKelompokAssignment[]> {
   try {
     const { data } = await supabase.from("kelompok_assignments").select("*");
-    return (data || []).map((ka: any) => toCamel(ka));
+    return (data || [])?.map?.((ka: any) => toCamel(ka));
   } catch { return []; }
 }
 
 async function sbGetPemanduAssignments(): Promise<LocalPemanduAssignment[]> {
   try {
     const { data } = await supabase.from("pemandu_assignments").select("*");
-    return (data || []).map((a: any) => toCamel(a));
+    return (data || [])?.map?.((a: any) => toCamel(a));
   } catch { return []; }
 }
 
@@ -188,7 +188,7 @@ async function sbGetLocations(): Promise<string[]> {
   try {
     const { data } = await supabase.from("locations").select("name");
     if (!data || data.length === 0) return DEFAULT_LOCATIONS;
-    return data.map((d: any) => d.name);
+    return data?.map?.((d: any) => d.name);
   } catch { return DEFAULT_LOCATIONS; }
 }
 
@@ -244,7 +244,7 @@ async function sbAssignToKelompok(registrantId: number, kelompokId: number) {
   await supabase.from("kelompok_assignments").insert([{ kelompok_id: kelompokId, registrant_id: registrantId, assigned_at: now }]);
   const { data: kData } = await supabase.from("kelompoks").select("pemandu_ids").eq("id", kelompokId).single();
   if (kData?.pemandu_ids) {
-    const newPas = kData.pemandu_ids.map((pid: number) => ({ pemandu_id: pid, registrant_id: registrantId, assigned_at: now }));
+    const newPas = kData.pemandu_ids?.map?.((pid: number) => ({ pemandu_id: pid, registrant_id: registrantId, assigned_at: now }));
     await supabase.from("pemandu_assignments").insert(newPas);
   }
 }
@@ -419,7 +419,7 @@ export function determineRole(angkatan: number, divisi: string): LocalMember["ro
 export function getPemandusFromMembers(members: LocalMember[]): (LocalPemandu & { nsa: string })[] {
   return members
     .filter((m) => m.role === "pemandu" || m.role === "psdm_pemandu")
-    .map((m) => ({
+    ?.map?.((m) => ({
       id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || 0,
       userId: 0,
       fullName: m.name,
@@ -464,12 +464,12 @@ export function getLocations(): string[] {
 }
 
 export async function getMembers(): Promise<LocalMember[]> {
-  const base = PRE_REGISTERED_MEMBERS.map((m) => ({ ...m, isPreRegistered: true }));
+  const base = PRE_REGISTERED_MEMBERS?.map?.((m) => ({ ...m, isPreRegistered: true }));
   try {
     const { data } = await supabase.from("members").select("*");
     if (data && data.length > 0) {
-      const fromDb = data.map((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
-      const existingNsas = new Set(base.map((m) => m.nsa.toLowerCase()));
+      const fromDb = data?.map?.((m: any) => ({ ...toCamel(m), isPreRegistered: true }));
+      const existingNsas = new Set(base?.map?.((m) => m.nsa.toLowerCase()));
       return [...base, ...fromDb.filter((m: LocalMember) => !existingNsas.has(m.nsa.toLowerCase()))];
     }
   } catch { /* ignore */ }
@@ -503,7 +503,7 @@ export async function seedMembers() {
 export function getPsdmMembers(members: LocalMember[]): LocalPemandu[] {
   return members
     .filter((m) => m.role === "psdm" || m.role === "psdm_pemandu")
-    .map((m) => ({
+    ?.map?.((m) => ({
       id: parseInt(m.nsa.replace(/\D/g, "").slice(-4)) || 0,
       userId: 0,
       fullName: m.name,
@@ -545,7 +545,7 @@ export function useLocalData() {
           sbGetKelompokAssignments(),
           sbGetPemanduAssignments(),
           sbGetLocations(),
-          supabase.from("standalone_pemandus").select("*").then(({ data }) => (data || []).map(toCamel)).catch(() => []),
+          supabase.from("standalone_pemandus").select("*").then(({ data }) => (data || [])?.map?.(toCamel)).catch(() => []),
         ]);
         if (cancelled) return;
         setMembers(m);
@@ -616,7 +616,7 @@ export function useLocalData() {
 
   // ─── Queries ────────────────────────────────────────────────────
   const memberPemandus = getPemandusFromMembers(members);
-  const allPemandus = [...memberPemandus, ...standalonePemandus.map((p) => ({ ...p, status: "active" as const, userId: 0 }))];
+  const allPemandus = [...memberPemandus, ...standalonePemandus?.map?.((p) => ({ ...p, status: "active" as const, userId: 0 }))];
 
   const getRegistrantByEmail = (email: string) => registrants?.find?.((r) => r.email.toLowerCase() === email.toLowerCase());
   const getRegistrantById = (id: number) => registrants?.find?.((r) => r.id === id);
@@ -631,10 +631,10 @@ export function useLocalData() {
   const getActivitiesByRegistrant = (registrantId: number) => activities.filter((a) => a.registrantId === registrantId);
   const getCUFOByPemandu = (pemanduId: number) => {
     const pemanduKelompoks = kelompoks.filter((k) => k.pemanduIds.includes(pemanduId));
-    const kelompokIds = pemanduKelompoks.map((k) => k.id);
+    const kelompokIds = pemanduKelompoks?.map?.((k) => k.id);
     return kelompokAssignments
       .filter((ka) => kelompokIds.includes(ka.kelompokId))
-      .map((ka) => {
+      ?.map?.((ka) => {
         const reg = registrants?.find?.((r) => r.id === ka.registrantId);
         return reg ? { registrantId: reg.id, registrantName: reg.fullName, registrantEmail: reg.email, registrantYear: reg.year, registrantMajor: reg.major } : null;
       })

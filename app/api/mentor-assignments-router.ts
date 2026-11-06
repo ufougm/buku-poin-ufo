@@ -154,7 +154,7 @@ export const mentorAssignmentsRouter = createRouter({
       .select({ registrantId: mentorAssignments.registrantId })
       .from(mentorAssignments);
 
-    const assignedIdSet = new Set(assignedIds.map(a => a.registrantId));
+    const assignedIdSet = new Set(assignedIds?.map?.(a => a.registrantId));
 
     // Get all active registrants
     const allRegistrants = await db

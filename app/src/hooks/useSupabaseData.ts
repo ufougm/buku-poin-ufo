@@ -100,7 +100,7 @@ export function useSupabaseData() {
       .select("*, activity_types(name)")
       .eq("registrant_id", registrantId)
       .order("submitted_at", { ascending: false });
-    return (data as any[])?.map((a) => ({
+    return (data as any[])?.map?.((a) => ({
       ...a,
       activity_type_name: a.activity_types?.name,
     })) || [];
@@ -114,14 +114,14 @@ export function useSupabaseData() {
       .select("registrant_id")
       .eq("mentor_id", mentorId);
     if (!assignments?.length) return [];
-    const cufoIds = assignments.map((a) => a.registrant_id);
+    const cufoIds = assignments?.map?.((a) => a.registrant_id);
     const { data } = await supabase
       .from("activities")
       .select("*, activity_types(name), registrants(full_name)")
       .eq("status", "pending")
       .in("registrant_id", cufoIds)
       .order("submitted_at", { ascending: false });
-    return (data as any[])?.map((a) => ({
+    return (data as any[])?.map?.((a) => ({
       ...a,
       activity_type_name: a.activity_types?.name,
       registrant_name: a.registrants?.full_name,
@@ -135,7 +135,7 @@ export function useSupabaseData() {
       .select("*, activity_types(name), registrants(full_name)")
       .order("submitted_at", { ascending: false })
       .limit(50);
-    return (data as any[])?.map((a) => ({
+    return (data as any[])?.map?.((a) => ({
       ...a,
       activity_type_name: a.activity_types?.name,
       registrant_name: a.registrants?.full_name,
@@ -191,7 +191,7 @@ export function useSupabaseData() {
       .from("mentor_assignments")
       .select("*, mentors(full_name, email), registrants(full_name, email, year, major)")
       .order("assigned_at", { ascending: false });
-    return (data as any[])?.map((a) => ({
+    return (data as any[])?.map?.((a) => ({
       ...a,
       mentor_name: a.mentors?.full_name,
       mentor_email: a.mentors?.email,
@@ -208,7 +208,7 @@ export function useSupabaseData() {
       .from("mentor_assignments")
       .select("*, registrants(full_name, email, year, major)")
       .eq("mentor_id", mentorId);
-    return (data as any[])?.map((a) => ({
+    return (data as any[])?.map?.((a) => ({
       assignment_id: a.id,
       registrant_id: a.registrant_id,
       registrant_name: a.registrants?.full_name,
@@ -224,7 +224,7 @@ export function useSupabaseData() {
     if (IS_DEMO) return [];
     // Get all registrant IDs that have assignments
     const { data: assigned } = await supabase.from("mentor_assignments").select("registrant_id");
-    const assignedIds = (assigned || []).map((a) => a.registrant_id);
+    const assignedIds = (assigned || [])?.map?.((a) => a.registrant_id);
     if (assignedIds.length === 0) {
       const { data } = await supabase.from("registrants").select("*").eq("status", "active").order("full_name");
       return (data as DbRegistrant[]) || [];

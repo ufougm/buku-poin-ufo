@@ -88,7 +88,7 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-4">Media Sosial UFO</h3>
             <div className="space-y-3">
-              {socials.map((s) => (
+              {socials?.map?.((s) => (
                 <a
                   key={s.label + s.url}
                   href={s.url}

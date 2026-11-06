@@ -98,7 +98,7 @@ export const activitiesRouter = createRouter({
       .from(mentorAssignments)
       .where(eq(mentorAssignments.mentorId, mentor.id));
 
-    const menteeIds = assignments.map(a => a.registrantId);
+    const menteeIds = assignments?.map?.(a => a.registrantId);
     if (menteeIds.length === 0) return [];
 
     // Get pending activities for mentees

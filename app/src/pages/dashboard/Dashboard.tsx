@@ -116,9 +116,6 @@ export default function MemberDashboard() {
     maxPts = 10;
   }
 
-console.log("BONGKAR DATA:", JSON.stringify(pemandus, null, 2));
-console.log("Cek HP Pemandu 1:", pemandu1?.phone);
-
   // Image compression utility
   const compressImage = (file: File, maxWidth = 800, quality = 0.6): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -161,18 +158,23 @@ console.log("Cek HP Pemandu 1:", pemandu1?.phone);
   // Find or auto-create registrant
   useEffect(() => {
     async function ensureRegistrant() {
-      if (!user?.name) return;
+  if (!user?.name || !local.loaded) return;
       let found = local.registrants?.find?.((r) =>
         r.fullName.toLowerCase().includes(user.name!.toLowerCase()) ||
         user.name!.toLowerCase().includes(r.fullName.toLowerCase())
       );
       if (!found) {
-        found = await local.addRegistrant({
-          fullName: user.name,
-          email: user?.email || `${user.id}@ufo.ugm.ac.id`,
-          year: new Date().getFullYear().toString(),
-          major: "Belum diisi",
-        });
+        try {
+  found = await local.addRegistrant({
+    fullName: user.name,
+    email: user?.email || `${user.id}@ufo.ugm.ac.id`,
+    year: new Date().getFullYear().toString(),
+    major: "Belum diisi",
+    status: "active",
+  });
+} catch (e) {
+  console.error("[ensureRegistrant]", e);
+}
       }
       if (found) setMyRegistrant(found);
     }
@@ -545,7 +547,7 @@ const summary = useMemo(() => {
                       <SelectContent>
                         {local.activityTypes.map((type) => (
                           <SelectItem key={type.id} value={type.id.toString()}>
-                            {type.number}. {type.name} ({type.points} poin)
+                            {type.id}. {type.name} ({type.points} poin)
                           </SelectItem>
                         ))}
                       </SelectContent>

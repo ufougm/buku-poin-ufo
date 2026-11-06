@@ -543,6 +543,7 @@ export function useLocalData() {
   const [locations, setLocations] = useState<string[]>(DEFAULT_LOCATIONS);
   const [standalonePemandus, setStandalonePemandus] = useState<StandalonePemandu[]>([]);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   // Load all data from Supabase (Aman & Bebas Looping)
   useEffect(() => {
@@ -569,13 +570,14 @@ export function useLocalData() {
         setPemanduAssignments(pa);
         setLocations(l);
         setStandalonePemandus(sp);
+        setLoaded(true);
       } catch (e: any) {
         console.error("[useLocalData] Failed to load data:", e?.message || e);
         if (!cancelled) setDbError(e?.message || "Gagal terhubung ke database");
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => { loaded, cancelled = true; };
   }, [version]);
 
   // ─── CRUD Operations ────────────────────────────────────────────
@@ -668,6 +670,7 @@ export function useLocalData() {
     version,
     refresh,
     dbError,
+    activityTypes: ACTIVITY_TYPES,
     members,
     registrants,
     activities,

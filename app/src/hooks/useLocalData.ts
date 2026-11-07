@@ -487,6 +487,27 @@ export function getLocations(): string[] {
   return DEFAULT_LOCATIONS;
 }
 
+export async function getActivityImages(registrantId: number): Promise<Record<number, string[]>> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select("id, documentation_images")
+    .eq("registrant_id", registrantId)
+    .eq("status", "verified");
+  if (error) {
+    console.error("[getActivityImages]", error);
+    return {};
+  }
+  const result: Record<number, string[]> = {};
+  for (const row of data ?? []) {
+    let imgs: any = row.documentation_images;
+    if (typeof imgs === "string") {
+      try { imgs = JSON.parse(imgs); } catch { imgs = []; }
+    }
+    if (Array.isArray(imgs) && imgs.length > 0) result[row.id] = imgs;
+  }
+  return result;
+}
+
 export async function getMembers(): Promise<LocalMember[]> {
   const base = PRE_REGISTERED_MEMBERS?.map?.((m) => ({ ...m, isPreRegistered: true }));
   try {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocalData, type LocalRegistrant } from "@/hooks/useLocalData";
+import { useLocalData, getActivityImages, type LocalRegistrant } from "@/hooks/useLocalData";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -310,10 +310,13 @@ const summary = useMemo(() => {
   };
 
   // PDF Generation — Buku Poin UFO UGM Format
-  const generatePDF = () => {
-    if (!activities || !myRegistrant) return;
-    const verifiedActivities = activities.filter((a) => a.status === "verified");
-    const doc = new jsPDF();
+  const generatePDF = async () => {
+  if (!activities || !myRegistrant) return;
+  const imageMap = await getActivityImages(myRegistrant.id);
+  const verifiedActivities = activities
+    .filter((a) => a.status === "verified")
+    .map((a) => ({ ...a, documentationImages: imageMap[a.id] ?? [] }));
+  const doc = new jsPDF();
 
     // Resolve kelompok and pemandu info for this registrant
     const kelompokName = local.getKelompokNameForRegistrant(myRegistrant.id);

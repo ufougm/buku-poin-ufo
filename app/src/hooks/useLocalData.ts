@@ -602,6 +602,11 @@ export function useLocalData() {
         setPemanduAssignments(pa);
         setLocations(l);
         setStandalonePemandus(sp);
+        console.log("[debug-pemandu]", {
+  members: m.length,
+  pemandu: m.filter((x) => x.role === "pemandu" || x.role === "psdm_pemandu").length,
+  kelompokPemanduIds: k.map((x) => ({ id: x.id, name: x.name, pemanduIds: x.pemanduIds })),
+});
       } catch (e: any) {
         console.error("[useLocalData] Failed to load data:", e?.message || e);
         if (!cancelled) setDbError(e?.message || "Gagal terhubung ke database");

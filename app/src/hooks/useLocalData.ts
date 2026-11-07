@@ -581,14 +581,15 @@ export function useLocalData() {
         setPemanduAssignments(pa);
         setLocations(l);
         setStandalonePemandus(sp);
-        setLoaded(true);
       } catch (e: any) {
         console.error("[useLocalData] Failed to load data:", e?.message || e);
         if (!cancelled) setDbError(e?.message || "Gagal terhubung ke database");
+      } finally {
+        if (!cancelled) setLoaded(true);
       }
     }
     load();
-    return () => { loaded, cancelled = true; };
+    return () => { cancelled = true; };
   }, [version]);
 
   // ─── CRUD Operations ────────────────────────────────────────────
@@ -681,6 +682,7 @@ export function useLocalData() {
     version,
     refresh,
     dbError,
+    loaded, 
     activityTypes: ACTIVITY_TYPES,
     members,
     registrants,

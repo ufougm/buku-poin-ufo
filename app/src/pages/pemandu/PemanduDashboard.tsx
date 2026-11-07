@@ -46,20 +46,13 @@ export default function PemanduDashboard() {
   const [refreshTick, setRefreshTick] = useState(0);
 
   // Find the pemandu record for this user from the member database
-  const myPemandu = useMemo(() => {
-    console.log("Nama Akun Login:", user?.name);
-    console.log("Daftar Pemandu di Sistem:", local.pemandus);
-
+    const myPemandu = useMemo(() => {
     if (!user?.name) return null;
-
-    // Look up pemandu by matching user's name
-    const ditemukan = local.pemandus?.find?.(
-      (m) => m.fullName.toLowerCase() === user.name!.toLowerCase()
+    const nameLower = user.name.toLowerCase();
+    return (
+      local.allPemandus?.find?.((m) => (m.fullName ?? "").toLowerCase() === nameLower) || null
     );
-
-    console.log("Hasil Pencocokan:", ditemukan);
-    return ditemukan || null;
-  }, [user, local.pemandus]);
+  }, [user?.name, local.allPemandus]);
 
   // Get CUFO for this pemandu (via kelompok or direct assignment)
   const cufos = useMemo(() => {

@@ -55,7 +55,7 @@ import { Label } from "@/components/ui/label";
 function safeCompute(local: any) {
   try {
     const registrants = local.registrants || [];
-    const pemandus = local.pemandus || [];
+    const pemandus = local.allPemandus || [];
     const activities = local.activities || [];
     const assignments = local.pemanduAssignments || [];
     const kelompoks = local.kelompoks || [];
